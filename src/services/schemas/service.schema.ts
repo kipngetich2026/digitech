@@ -1,58 +1,48 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
-export type CustomerDocument = HydratedDocument<Customer>;
+export type ServiceDocument = HydratedDocument<Service>;
 
 @Schema({
   timestamps: true,
-  collection: 'customers',
+  collection: 'services',
 })
-export class Customer {
+export class Service {
   @Prop({
     required: true,
     unique: true,
     trim: true,
+    uppercase: true,
     index: true,
   })
-  customerNumber: string;
+  serviceCode: string;
 
   @Prop({
     required: true,
     trim: true,
     minlength: 2,
-    maxlength: 50,
+    maxlength: 100,
   })
-  firstName: string;
+  name: string;
+
+  @Prop({
+    trim: true,
+    maxlength: 500,
+  })
+  description?: string;
 
   @Prop({
     required: true,
     trim: true,
-    minlength: 2,
-    maxlength: 50,
+    maxlength: 100,
   })
-  lastName: string;
-
-  @Prop({
-    unique: true,
-    sparse: true,
-    lowercase: true,
-    trim: true,
-  })
-  email?: string;
+  category: string;
 
   @Prop({
     required: true,
-    unique: true,
-    sparse: true,
-    trim: true,
+    min: 0,
   })
-  phone?: string;
-
-  @Prop({
-    trim: true,
-    maxlength: 255,
-  })
-  address?: string;
+  price: number;
 
   @Prop({
     type: Types.ObjectId,
@@ -69,5 +59,5 @@ export class Customer {
   isActive: boolean;
 }
 
-export const CustomerSchema =
-  SchemaFactory.createForClass(Customer);
+export const ServiceSchema =
+  SchemaFactory.createForClass(Service);

@@ -10,39 +10,41 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { CustomersService } from './customers.service';
+import { InvoicesService } from './invoices.service';
 
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { UpdateCustomerStatusDto } from './dto/update-customer-status.dto';
+import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
+import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
-@Controller('customers')
+@Controller('invoices')
 @UseGuards(JwtAuthGuard, RolesGuard)
-export class CustomersController {
+export class InvoicesController {
   constructor(
-    private readonly customersService: CustomersService,
+    private readonly invoicesService: InvoicesService,
   ) {}
 
   @Post()
   @Roles('SUPER_ADMIN', 'STAFF')
   create(
-    @Body() createCustomerDto: CreateCustomerDto,
+    @Body() createInvoiceDto: CreateInvoiceDto,
     @Req() req: any,
   ) {
-    return this.customersService.create(
-      createCustomerDto,
-      req.user.branchId,
+    return this.invoicesService.create(
+      createInvoiceDto,
+      req.user,
     );
   }
 
   @Get()
   @Roles('SUPER_ADMIN', 'STAFF')
   findAll(@Req() req: any) {
-    return this.customersService.findAll(req.user);
+    return this.invoicesService.findAll(
+      req.user,
+    );
   }
 
   @Get(':id')
@@ -51,7 +53,7 @@ export class CustomersController {
     @Param('id') id: string,
     @Req() req: any,
   ) {
-    return this.customersService.findById(
+    return this.invoicesService.findById(
       id,
       req.user,
     );
@@ -61,12 +63,12 @@ export class CustomersController {
   @Roles('SUPER_ADMIN', 'STAFF')
   update(
     @Param('id') id: string,
-    @Body() updateCustomerDto: UpdateCustomerDto,
+    @Body() updateInvoiceDto: UpdateInvoiceDto,
     @Req() req: any,
   ) {
-    return this.customersService.update(
+    return this.invoicesService.update(
       id,
-      updateCustomerDto,
+      updateInvoiceDto,
       req.user,
     );
   }
@@ -75,12 +77,13 @@ export class CustomersController {
   @Roles('SUPER_ADMIN', 'STAFF')
   updateStatus(
     @Param('id') id: string,
-    @Body() updateCustomerStatusDto: UpdateCustomerStatusDto,
+    @Body()
+    updateInvoiceStatusDto: UpdateInvoiceStatusDto,
     @Req() req: any,
   ) {
-    return this.customersService.updateStatus(
+    return this.invoicesService.updateStatus(
       id,
-      updateCustomerStatusDto.isActive,
+      updateInvoiceStatusDto.status,
       req.user,
     );
   }
@@ -91,7 +94,7 @@ export class CustomersController {
     @Param('id') id: string,
     @Req() req: any,
   ) {
-    return this.customersService.remove(
+    return this.invoicesService.remove(
       id,
       req.user,
     );

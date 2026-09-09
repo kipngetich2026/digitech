@@ -10,31 +10,31 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { CustomersService } from './customers.service';
+import { ProductsService } from './products.service';
 
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { UpdateCustomerStatusDto } from './dto/update-customer-status.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
-@Controller('customers')
+@Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
-export class CustomersController {
+export class ProductsController {
   constructor(
-    private readonly customersService: CustomersService,
+    private readonly productsService: ProductsService,
   ) {}
 
   @Post()
   @Roles('SUPER_ADMIN', 'STAFF')
   create(
-    @Body() createCustomerDto: CreateCustomerDto,
+    @Body() createProductDto: CreateProductDto,
     @Req() req: any,
   ) {
-    return this.customersService.create(
-      createCustomerDto,
+    return this.productsService.create(
+      createProductDto,
       req.user.branchId,
     );
   }
@@ -42,7 +42,7 @@ export class CustomersController {
   @Get()
   @Roles('SUPER_ADMIN', 'STAFF')
   findAll(@Req() req: any) {
-    return this.customersService.findAll(req.user);
+    return this.productsService.findAll(req.user);
   }
 
   @Get(':id')
@@ -51,7 +51,7 @@ export class CustomersController {
     @Param('id') id: string,
     @Req() req: any,
   ) {
-    return this.customersService.findById(
+    return this.productsService.findById(
       id,
       req.user,
     );
@@ -61,12 +61,12 @@ export class CustomersController {
   @Roles('SUPER_ADMIN', 'STAFF')
   update(
     @Param('id') id: string,
-    @Body() updateCustomerDto: UpdateCustomerDto,
+    @Body() updateProductDto: UpdateProductDto,
     @Req() req: any,
   ) {
-    return this.customersService.update(
+    return this.productsService.update(
       id,
-      updateCustomerDto,
+      updateProductDto,
       req.user,
     );
   }
@@ -75,12 +75,13 @@ export class CustomersController {
   @Roles('SUPER_ADMIN', 'STAFF')
   updateStatus(
     @Param('id') id: string,
-    @Body() updateCustomerStatusDto: UpdateCustomerStatusDto,
+    @Body()
+    updateProductStatusDto: UpdateProductStatusDto,
     @Req() req: any,
   ) {
-    return this.customersService.updateStatus(
+    return this.productsService.updateStatus(
       id,
-      updateCustomerStatusDto.isActive,
+      updateProductStatusDto.isActive,
       req.user,
     );
   }
@@ -91,7 +92,7 @@ export class CustomersController {
     @Param('id') id: string,
     @Req() req: any,
   ) {
-    return this.customersService.remove(
+    return this.productsService.remove(
       id,
       req.user,
     );

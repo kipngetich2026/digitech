@@ -1,58 +1,68 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
-export type CustomerDocument = HydratedDocument<Customer>;
+export type ProductDocument = HydratedDocument<Product>;
 
 @Schema({
   timestamps: true,
-  collection: 'customers',
+  collection: 'products',
 })
-export class Customer {
+export class Product {
   @Prop({
     required: true,
     unique: true,
     trim: true,
+    uppercase: true,
     index: true,
   })
-  customerNumber: string;
+  sku: string;
 
   @Prop({
     required: true,
     trim: true,
     minlength: 2,
-    maxlength: 50,
+    maxlength: 100,
   })
-  firstName: string;
+  name: string;
+
+  @Prop({
+    trim: true,
+    maxlength: 500,
+  })
+  description?: string;
 
   @Prop({
     required: true,
     trim: true,
-    minlength: 2,
-    maxlength: 50,
+    maxlength: 100,
   })
-  lastName: string;
-
-  @Prop({
-    unique: true,
-    sparse: true,
-    lowercase: true,
-    trim: true,
-  })
-  email?: string;
+  category: string;
 
   @Prop({
     required: true,
-    unique: true,
-    sparse: true,
-    trim: true,
+    min: 0,
   })
-  phone?: string;
+  sellingPrice: number;
 
   @Prop({
-    trim: true,
-    maxlength: 255,
+    required: true,
+    min: 0,
   })
-  address?: string;
+  costPrice: number;
+
+  @Prop({
+    required: true,
+    default: 0,
+    min: 0,
+  })
+  stockQuantity: number;
+
+  @Prop({
+    required: true,
+    default: 5,
+    min: 0,
+  })
+  reorderLevel: number;
 
   @Prop({
     type: Types.ObjectId,
@@ -69,5 +79,5 @@ export class Customer {
   isActive: boolean;
 }
 
-export const CustomerSchema =
-  SchemaFactory.createForClass(Customer);
+export const ProductSchema =
+  SchemaFactory.createForClass(Product);

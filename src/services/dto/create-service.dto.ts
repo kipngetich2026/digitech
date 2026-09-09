@@ -1,36 +1,37 @@
 import {
-  IsEmail,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
-export class CreateCustomerDto {
+export class CreateServiceDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
   @MaxLength(50)
-  firstName: string;
+  serviceCode: string;
 
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
-  @MaxLength(50)
-  lastName: string;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  @MaxLength(100)
+  name: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(30)
-  phone?: string;
+  @MaxLength(500)
+  description?: string;
 
-  @IsOptional()
   @IsString()
-  @MaxLength(255)
-  address?: string;
+  @IsNotEmpty()
+  @MaxLength(100)
+  category: string;
+
+  @IsNumber()
+  @Min(0)
+  price: number;
 }
