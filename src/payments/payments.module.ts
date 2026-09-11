@@ -14,6 +14,7 @@ import {
   Invoice,
   InvoiceSchema,
 } from '../invoices/schemas/invoice.schema';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import {
     PassportModule.register({
       defaultStrategy: 'jwt',
     }),
+      AuditLogsModule,
   ],
 
   controllers: [PaymentsController],
@@ -38,5 +40,6 @@ import {
   providers: [PaymentsService],
 
   exports: [PaymentsService],
+
 })
 export class PaymentsModule {}

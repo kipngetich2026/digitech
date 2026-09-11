@@ -21,17 +21,26 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(
+  JwtAuthGuard,
+  RolesGuard,
+)
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles(
+    'SUPER_ADMIN',
+    'STAFF',
+  )
   create(
-    @Body() createOrderDto: CreateOrderDto,
-    @Req() req: any,
+    @Body()
+    createOrderDto: CreateOrderDto,
+
+    @Req()
+    req: any,
   ) {
     return this.ordersService.create(
       createOrderDto,
@@ -40,18 +49,30 @@ export class OrdersController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
-  findAll(@Req() req: any) {
+  @Roles(
+    'SUPER_ADMIN',
+    'STAFF',
+  )
+  findAll(
+    @Req()
+    req: any,
+  ) {
     return this.ordersService.findAll(
       req.user,
     );
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles(
+    'SUPER_ADMIN',
+    'STAFF',
+  )
   findOne(
-    @Param('id') id: string,
-    @Req() req: any,
+    @Param('id')
+    id: string,
+
+    @Req()
+    req: any,
   ) {
     return this.ordersService.findById(
       id,
@@ -60,11 +81,19 @@ export class OrdersController {
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles(
+    'SUPER_ADMIN',
+    'STAFF',
+  )
   update(
-    @Param('id') id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-    @Req() req: any,
+    @Param('id')
+    id: string,
+
+    @Body()
+    updateOrderDto: UpdateOrderDto,
+
+    @Req()
+    req: any,
   ) {
     return this.ordersService.update(
       id,
@@ -74,12 +103,19 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles(
+    'SUPER_ADMIN',
+    'STAFF',
+  )
   updateStatus(
-    @Param('id') id: string,
+    @Param('id')
+    id: string,
+
     @Body()
     updateOrderStatusDto: UpdateOrderStatusDto,
-    @Req() req: any,
+
+    @Req()
+    req: any,
   ) {
     return this.ordersService.updateStatus(
       id,
@@ -89,10 +125,15 @@ export class OrdersController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles(
+    'SUPER_ADMIN',
+  )
   remove(
-    @Param('id') id: string,
-    @Req() req: any,
+    @Param('id')
+    id: string,
+
+    @Req()
+    req: any,
   ) {
     return this.ordersService.remove(
       id,

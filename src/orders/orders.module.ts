@@ -2,8 +2,13 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 
-import { OrdersController } from './orders.controller';
-import { OrdersService } from './orders.service';
+import {
+  OrdersController,
+} from './orders.controller';
+
+import {
+  OrdersService,
+} from './orders.service';
 
 import {
   Order,
@@ -24,6 +29,11 @@ import {
   Customer,
   CustomerSchema,
 } from '../customers/schemas/customer.schema';
+
+import {
+  InventoryModule,
+} from '../inventory/inventory.module';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -49,12 +59,21 @@ import {
     PassportModule.register({
       defaultStrategy: 'jwt',
     }),
+
+    InventoryModule,
+    AuditLogsModule,
   ],
 
-  controllers: [OrdersController],
+  controllers: [
+    OrdersController,
+  ],
 
-  providers: [OrdersService],
+  providers: [
+    OrdersService,
+  ],
 
-  exports: [OrdersService],
+  exports: [
+    OrdersService,
+  ],
 })
 export class OrdersModule {}

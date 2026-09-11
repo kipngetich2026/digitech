@@ -17,6 +17,9 @@ import { PaymentsModule } from './payments/payments.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { EmployeesModule } from './employees/employees.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ReportsModule } from './reports/reports.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     ExpensesModule,
     EmployeesModule,
     NotificationsModule,
+    ReportsModule,
+    InventoryModule,
+    AuditLogsModule,
   ],
 
   controllers: [AppController],
