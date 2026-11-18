@@ -1,0 +1,70 @@
+
+> frontend@0.0.0 start
+> ng serve
+
+❯ Building...
+✔ Building...
+Initial chunk files | Names                    |  Raw size
+styles.css          | styles                   |  32.58 kB | 
+main.js             | main                     |   7.90 kB | 
+chunk-YKRZZE2H.js   | -                        |   3.22 kB | 
+chunk-7IFNXVHG.js   | -                        |   2.21 kB | 
+chunk-LDWEDQO4.js   | -                        |   1.35 kB | 
+chunk-VM5KH3VH.js   | -                        | 369 bytes | 
+
+                    | Initial total            |  47.63 kB
+
+Lazy chunk files    | Names                    |  Raw size
+chunk-TD37GORW.js   | inventory-component      |  47.75 kB | 
+chunk-HZVZYAJ7.js   | employee-list-component  |  38.88 kB | 
+chunk-FAC6QDG3.js   | product-list-component   |  36.98 kB | 
+chunk-BEJ75XLY.js   | expense-list-component   |  36.27 kB | 
+chunk-74EGH7PO.js   | payment-list-component   |  34.70 kB | 
+chunk-YUW5B6E2.js   | service-list-component   |  31.46 kB | 
+chunk-L7BM6SJO.js   | customer-list-component  |  30.81 kB | 
+chunk-ZTGMAOQN.js   | invoice-list-component   |  29.72 kB | 
+chunk-HU66EP7U.js   | branch-list-component    |  29.17 kB | 
+chunk-CR4ID6L6.js   | order-create-component   |  29.17 kB | 
+chunk-2BIHHI7W.js   | shell-component          |  24.99 kB | 
+chunk-EED3CS2D.js   | order-detail-component   |  23.04 kB | 
+chunk-ASFNTGJK.js   | invoice-detail-component |  22.99 kB | 
+chunk-FVSLBWER.js   | dashboard-component      |  19.52 kB | 
+chunk-UH6YSIW5.js   | order-list-component     |  18.80 kB | 
+...and 20 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [15.540 seconds] - 2026-11-18T05:06:33.393Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4200[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+❯ Changes detected. Rebuilding...
+✔ Changes detected. Rebuilding...
+Initial chunk files | Names                    |  Raw size
+main.js             | main                     |   7.90 kB | 
+chunk-YKRZZE2H.js   | -                        |   3.22 kB | 
+chunk-7IFNXVHG.js   | -                        |   2.21 kB | 
+chunk-LDWEDQO4.js   | -                        |   1.35 kB | 
+chunk-VM5KH3VH.js   | -                        | 369 bytes | 
+
+Lazy chunk files    | Names                    |  Raw size
+chunk-TD37GORW.js   | inventory-component      |  47.75 kB | 
+chunk-HZVZYAJ7.js   | employee-list-component  |  38.88 kB | 
+chunk-FAC6QDG3.js   | product-list-component   |  36.98 kB | 
+chunk-BEJ75XLY.js   | expense-list-component   |  36.27 kB | 
+chunk-74EGH7PO.js   | payment-list-component   |  34.70 kB | 
+chunk-YUW5B6E2.js   | service-list-component   |  31.46 kB | 
+chunk-L7BM6SJO.js   | customer-list-component  |  30.81 kB | 
+chunk-ZTGMAOQN.js   | invoice-list-component   |  29.72 kB | 
+chunk-HU66EP7U.js   | branch-list-component    |  29.17 kB | 
+chunk-CR4ID6L6.js   | order-create-component   |  29.17 kB | 
+chunk-2BIHHI7W.js   | shell-component          |  24.99 kB | 
+chunk-EED3CS2D.js   | order-detail-component   |  23.04 kB | 
+chunk-ASFNTGJK.js   | invoice-detail-component |  22.99 kB | 
+chunk-FVSLBWER.js   | dashboard-component      |  19.52 kB | 
+chunk-UH6YSIW5.js   | order-list-component     |  18.80 kB | 
+...and 20 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [0.366 seconds] - 2026-11-18T05:23:36.544Z
+
+Page reload sent to client(s).
