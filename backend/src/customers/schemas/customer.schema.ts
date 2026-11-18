@@ -41,7 +41,6 @@ export class Customer {
   email?: string;
 
   @Prop({
-    required: true,
     unique: true,
     sparse: true,
     trim: true,

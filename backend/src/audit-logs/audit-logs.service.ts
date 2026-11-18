@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
 import { InjectModel } from '@nestjs/mongoose';
 
 import {
@@ -142,7 +143,7 @@ export class AuditLogsService {
     },
   ): Promise<AuditLogDocument[]> {
     const filter =
-      user.role === 'SUPER_ADMIN'
+      isElevated(user.role)
         ? {}
         : {
             branchId:
@@ -188,7 +189,7 @@ export class AuditLogsService {
     };
 
     if (
-      user.role !== 'SUPER_ADMIN'
+      !isElevated(user.role)
     ) {
       filter.branchId =
         new Types.ObjectId(
@@ -232,7 +233,7 @@ export class AuditLogsService {
     };
 
     if (
-      user.role !== 'SUPER_ADMIN'
+      !isElevated(user.role)
     ) {
       filter.branchId =
         new Types.ObjectId(
@@ -270,7 +271,7 @@ export class AuditLogsService {
     };
 
     if (
-      user.role !== 'SUPER_ADMIN'
+      !isElevated(user.role)
     ) {
       filter.branchId =
         new Types.ObjectId(
@@ -318,7 +319,7 @@ export class AuditLogsService {
     };
 
     if (
-      user.role !== 'SUPER_ADMIN'
+      !isElevated(user.role)
     ) {
       filter.branchId =
         new Types.ObjectId(
@@ -368,7 +369,7 @@ export class AuditLogsService {
     };
 
     if (
-      user.role !== 'SUPER_ADMIN'
+      !isElevated(user.role)
     ) {
       filter.branchId =
         new Types.ObjectId(

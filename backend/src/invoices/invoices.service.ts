@@ -5,22 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
+import { nextSequenceNumber } from '../common/sequence';
 import { InjectModel } from '@nestjs/mongoose';
 
-import {
-  Model,
-  Types,
-} from 'mongoose';
+import { Model, Types } from 'mongoose';
 
-import {
-  Invoice,
-  InvoiceDocument,
-} from './schemas/invoice.schema';
+import { Invoice, InvoiceDocument } from './schemas/invoice.schema';
 
-import {
-  Order,
-  OrderDocument,
-} from '../orders/schemas/order.schema';
+import { Order, OrderDocument } from '../orders/schemas/order.schema';
 
 import {
   Customer,
@@ -54,35 +47,25 @@ export class InvoicesService {
     },
   ): Promise<InvoiceDocument> {
     if (!Types.ObjectId.isValid(data.orderId)) {
-      throw new BadRequestException(
-        'Invalid order ID',
-      );
+      throw new BadRequestException('Invalid order ID');
     }
 
     if (!Types.ObjectId.isValid(user.branchId)) {
-      throw new BadRequestException(
-        'Invalid branch ID',
-      );
+      throw new BadRequestException('Invalid branch ID');
     }
 
     const orderFilter: any = {
       _id: data.orderId,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      orderFilter.branchId =
-        new Types.ObjectId(user.branchId);
+    if (!isElevated(user.role)) {
+      orderFilter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const order =
-      await this.orderModel
-        .findOne(orderFilter)
-        .exec();
+    const order = await this.orderModel.findOne(orderFilter).exec();
 
     if (!order) {
-      throw new NotFoundException(
-        'Order not found',
-      );
+      throw new NotFoundException('Order not found');
     }
 
     if (order.status === 'CANCELLED') {
@@ -91,23 +74,17 @@ export class InvoicesService {
       );
     }
 
-    const existingInvoice =
-      await this.invoiceModel
-        .findOne({
-          orderId: order._id,
-        })
-        .exec();
+    const existingInvoice = await this.invoiceModel
+      .findOne({
+        orderId: order._id,
+      })
+      .exec();
 
     if (existingInvoice) {
-      throw new ConflictException(
-        'An invoice already exists for this order',
-      );
+      throw new ConflictException('An invoice already exists for this order');
     }
 
-    const customer =
-      await this.customerModel
-        .findById(order.customerId)
-        .exec();
+    const customer = await this.customerModel.findById(order.customerId).exec();
 
     if (!customer) {
       throw new NotFoundException(
@@ -115,13 +92,10 @@ export class InvoicesService {
       );
     }
 
-    const amountPaid =
-      data.amountPaid ?? 0;
+    const amountPaid = data.amountPaid ?? 0;
 
     if (amountPaid < 0) {
-      throw new BadRequestException(
-        'Amount paid cannot be negative',
-      );
+      throw new BadRequestException('Amount paid cannot be negative');
     }
 
     if (amountPaid > order.total) {
@@ -130,8 +104,7 @@ export class InvoicesService {
       );
     }
 
-    const balanceDue =
-      order.total - amountPaid;
+    const balanceDue = order.total - amountPaid;
 
     let paymentStatus = 'UNPAID';
 
@@ -143,96 +116,76 @@ export class InvoicesService {
       paymentStatus = 'PAID';
     }
 
-    const count =
-      await this.invoiceModel.countDocuments();
+    const invoiceNumber = await nextSequenceNumber(
+      this.invoiceModel,
+      'invoiceNumber',
+      'INV',
+    );
 
-    const invoiceNumber =
-      `INV-${String(count + 1).padStart(6, '0')}`;
+    const invoiceItems = order.items.map((item) => ({
+      productId: item.productId,
+      serviceId: item.serviceId,
+      itemName: item.itemName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      subtotal: item.subtotal,
+    }));
 
-    const invoiceItems =
-      order.items.map((item) => ({
-        productId: item.productId,
-        serviceId: item.serviceId,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-      }));
+    const invoice = new this.invoiceModel({
+      invoiceNumber,
 
-    const invoice =
-      new this.invoiceModel({
-        invoiceNumber,
+      orderId: order._id,
 
-        orderId: order._id,
+      customerId: customer._id,
 
-        customerId: customer._id,
+      branchId: order.branchId,
 
-        branchId: order.branchId,
+      items: invoiceItems,
 
-        items: invoiceItems,
+      subtotal: order.subtotal,
 
-        subtotal: order.subtotal,
+      discount: order.discount,
 
-        discount: order.discount,
+      tax: order.tax,
 
-        tax: order.tax,
+      total: order.total,
 
-        total: order.total,
+      amountPaid,
 
-        amountPaid,
+      balanceDue,
 
-        balanceDue,
+      paymentStatus,
 
-        paymentStatus,
+      status: 'ISSUED',
 
-        status: 'ISSUED',
+      issueDate: new Date(),
 
-        issueDate: new Date(),
+      dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
 
-        dueDate: data.dueDate
-          ? new Date(data.dueDate)
-          : undefined,
+      notes: data.notes,
 
-        notes: data.notes,
-
-        createdBy: new Types.ObjectId(
-          user.sub,
-        ),
-      });
+      createdBy: new Types.ObjectId(user.sub),
+    });
 
     return invoice.save();
   }
 
-  async findAll(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<InvoiceDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId: new Types.ObjectId(
-              user.branchId,
-            ),
-          };
+  async findAll(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<InvoiceDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.invoiceModel
       .find(filter)
-      .populate(
-        'customerId',
-        'customerNumber firstName lastName phone email',
-      )
-      .populate(
-        'orderId',
-        'orderNumber status paymentStatus total',
-      )
-      .populate(
-        'createdBy',
-        'firstName lastName email',
-      )
+      .populate('customerId', 'customerNumber firstName lastName phone email')
+      .populate('orderId', 'orderNumber status paymentStatus total')
+      .populate('createdBy', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -246,41 +199,26 @@ export class InvoicesService {
     },
   ): Promise<InvoiceDocument> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(
-        'Invalid invoice ID',
-      );
+      throw new NotFoundException('Invalid invoice ID');
     }
 
     const filter: any = {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId =
-        new Types.ObjectId(user.branchId);
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const invoice =
-      await this.invoiceModel
-        .findOne(filter)
-        .populate(
-          'customerId',
-          'customerNumber firstName lastName phone email',
-        )
-        .populate(
-          'orderId',
-          'orderNumber status paymentStatus total',
-        )
-        .populate(
-          'createdBy',
-          'firstName lastName email',
-        )
-        .exec();
+    const invoice = await this.invoiceModel
+      .findOne(filter)
+      .populate('customerId', 'customerNumber firstName lastName phone email')
+      .populate('orderId', 'orderNumber status paymentStatus total')
+      .populate('createdBy', 'firstName lastName email')
+      .exec();
 
     if (!invoice) {
-      throw new NotFoundException(
-        'Invoice not found',
-      );
+      throw new NotFoundException('Invoice not found');
     }
 
     return invoice;
@@ -298,18 +236,14 @@ export class InvoicesService {
       branchId: string;
     },
   ): Promise<InvoiceDocument> {
-    const invoice =
-      await this.findById(id, user);
+    const invoice = await this.findById(id, user);
 
     if (invoice.status === 'CANCELLED') {
-      throw new ConflictException(
-        'Cancelled invoices cannot be updated',
-      );
+      throw new ConflictException('Cancelled invoices cannot be updated');
     }
 
     if (data.dueDate !== undefined) {
-      invoice.dueDate =
-        new Date(data.dueDate);
+      invoice.dueDate = new Date(data.dueDate);
     }
 
     if (data.notes !== undefined) {
@@ -328,13 +262,10 @@ export class InvoicesService {
       branchId: string;
     },
   ): Promise<InvoiceDocument> {
-    const invoice =
-      await this.findById(id, user);
+    const invoice = await this.findById(id, user);
 
     if (invoice.status === 'CANCELLED') {
-      throw new ConflictException(
-        'Cancelled invoices cannot change status',
-      );
+      throw new ConflictException('Cancelled invoices cannot change status');
     }
 
     invoice.status = status;
@@ -350,22 +281,16 @@ export class InvoicesService {
       branchId: string;
     },
   ): Promise<{ message: string }> {
-    const invoice =
-      await this.findById(id, user);
+    const invoice = await this.findById(id, user);
 
     if (invoice.paymentStatus === 'PAID') {
-      throw new ConflictException(
-        'Paid invoices cannot be deleted',
-      );
+      throw new ConflictException('Paid invoices cannot be deleted');
     }
 
-    await this.invoiceModel
-      .findByIdAndDelete(invoice._id)
-      .exec();
+    await this.invoiceModel.findByIdAndDelete(invoice._id).exec();
 
     return {
-      message:
-        'Invoice deleted successfully',
+      message: 'Invoice deleted successfully',
     };
   }
 }

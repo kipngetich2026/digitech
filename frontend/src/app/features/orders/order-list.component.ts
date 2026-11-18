@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SalesService } from '../../core/services/sales.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AuthService } from '../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { KesPipe } from '../../shared/pipes/kes.pipe';
@@ -11,15 +10,16 @@ import { LoadingComponent } from '../../shared/components/loading.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { SearchInputComponent } from '../../shared/components/search-input.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
-import { errorMessage } from '../../core/models/api.models';
+import { errorMessage, ELEVATED_ROLES } from '../../core/models/api.models';
 import { Order } from '../../core/models/order.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-order-list',
   standalone: true,
   imports: [
     RouterLink, PageHeaderComponent, SearchInputComponent, StatusBadgeComponent,
-    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, DatePipe,
+    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, DatePipe, HasRoleDirective,
   ],
   template: `
     <app-page-header title="Orders" subtitle="Track sales orders">
@@ -78,8 +78,8 @@ import { Order } from '../../core/models/order.models';
                 <td class="px-4 py-3"><app-status-badge [status]="o.paymentStatus" /></td>
                 <td class="px-4 py-3 text-right">
                   <a [routerLink]="['/orders', o._id]" class="mr-3 text-xs font-medium text-indigo-600 hover:underline">View</a>
-                  @if (auth.isSuperAdmin() && o.status === 'PENDING') {
-                    <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
+                  @if (o.status === 'PENDING') {
+                    <button *hasRole="ELEVATED_ROLES" type="button" class="text-xs font-medium text-rose-600 hover:underline"
                       (click)="askDelete(o)">Delete</button>
                   }
                 </td>
@@ -96,9 +96,9 @@ import { Order } from '../../core/models/order.models';
   `,
 })
 export class OrderListComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly sales = inject(SalesService);
   private readonly toast = inject(ToastService);
-  readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly items = signal<Order[]>([]);

@@ -5,26 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
+import { nextSequenceNumber } from '../common/sequence';
 import { InjectModel } from '@nestjs/mongoose';
 
-import {
-  Model,
-  Types,
-} from 'mongoose';
+import { Model, Types } from 'mongoose';
 
-import {
-  Payment,
-  PaymentDocument,
-} from './schemas/payment.schema';
+import { Payment, PaymentDocument } from './schemas/payment.schema';
 
-import {
-  Invoice,
-  InvoiceDocument,
-} from '../invoices/schemas/invoice.schema';
+import { Invoice, InvoiceDocument } from '../invoices/schemas/invoice.schema';
 
-import {
-  AuditLogsService,
-} from '../audit-logs/audit-logs.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class PaymentsService {
@@ -62,74 +53,36 @@ export class PaymentsService {
     // VALIDATE IDS
     // ---------------------------------------------------------
 
-    if (
-      !Types.ObjectId.isValid(
-        data.invoiceId,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid invoice ID',
-      );
+    if (!Types.ObjectId.isValid(data.invoiceId)) {
+      throw new BadRequestException('Invalid invoice ID');
     }
 
-    if (
-      !Types.ObjectId.isValid(
-        user.sub,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid user ID',
-      );
+    if (!Types.ObjectId.isValid(user.sub)) {
+      throw new BadRequestException('Invalid user ID');
     }
 
-    if (
-      !Types.ObjectId.isValid(
-        user.branchId,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid branch ID',
-      );
+    if (!Types.ObjectId.isValid(user.branchId)) {
+      throw new BadRequestException('Invalid branch ID');
     }
 
     // ---------------------------------------------------------
     // VALIDATE AMOUNT
     // ---------------------------------------------------------
 
-    if (
-      !Number.isFinite(
-        data.amount,
-      ) ||
-      data.amount <= 0
-    ) {
-      throw new BadRequestException(
-        'Payment amount must be greater than zero',
-      );
+    if (!Number.isFinite(data.amount) || data.amount <= 0) {
+      throw new BadRequestException('Payment amount must be greater than zero');
     }
 
     // ---------------------------------------------------------
     // VALIDATE PAYMENT METHOD
     // ---------------------------------------------------------
 
-    const method =
-      data.method.toUpperCase();
+    const method = data.method.toUpperCase();
 
-    const allowedMethods = [
-      'CASH',
-      'MPESA',
-      'BANK_TRANSFER',
-      'CARD',
-      'CHEQUE',
-    ];
+    const allowedMethods = ['CASH', 'MPESA', 'BANK_TRANSFER', 'CARD', 'CHEQUE'];
 
-    if (
-      !allowedMethods.includes(
-        method,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid payment method',
-      );
+    if (!allowedMethods.includes(method)) {
+      throw new BadRequestException('Invalid payment method');
     }
 
     // ---------------------------------------------------------
@@ -140,56 +93,33 @@ export class PaymentsService {
       _id: data.invoiceId,
     };
 
-    if (
-      user.role !== 'SUPER_ADMIN'
-    ) {
-      invoiceFilter.branchId =
-        new Types.ObjectId(
-          user.branchId,
-        );
+    if (!isElevated(user.role)) {
+      invoiceFilter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const invoice =
-      await this.invoiceModel
-        .findOne(invoiceFilter)
-        .exec();
+    const invoice = await this.invoiceModel.findOne(invoiceFilter).exec();
 
     if (!invoice) {
-      throw new NotFoundException(
-        'Invoice not found',
-      );
+      throw new NotFoundException('Invoice not found');
     }
 
     // ---------------------------------------------------------
     // CHECK INVOICE STATUS
     // ---------------------------------------------------------
 
-    if (
-      invoice.status ===
-      'CANCELLED'
-    ) {
-      throw new ConflictException(
-        'Cannot make payment on a cancelled invoice',
-      );
+    if (invoice.status === 'CANCELLED') {
+      throw new ConflictException('Cannot make payment on a cancelled invoice');
     }
 
-    if (
-      invoice.paymentStatus ===
-      'PAID'
-    ) {
-      throw new ConflictException(
-        'Invoice is already fully paid',
-      );
+    if (invoice.paymentStatus === 'PAID') {
+      throw new ConflictException('Invoice is already fully paid');
     }
 
     // ---------------------------------------------------------
     // CHECK OUTSTANDING BALANCE
     // ---------------------------------------------------------
 
-    if (
-      data.amount >
-      invoice.balanceDue
-    ) {
+    if (data.amount > invoice.balanceDue) {
       throw new BadRequestException(
         `Payment amount cannot exceed the outstanding balance of ${invoice.balanceDue}`,
       );
@@ -199,67 +129,46 @@ export class PaymentsService {
     // CREATE PAYMENT
     // ---------------------------------------------------------
 
-    const payment =
-      new this.paymentModel({
-        paymentNumber:
-          await this.generatePaymentNumber(),
+    const payment = new this.paymentModel({
+      paymentNumber: await this.generatePaymentNumber(),
 
-        invoiceId:
-          invoice._id,
+      invoiceId: invoice._id,
 
-        orderId:
-          invoice.orderId,
+      orderId: invoice.orderId,
 
-        customerId:
-          invoice.customerId,
+      customerId: invoice.customerId,
 
-        branchId:
-          invoice.branchId,
+      branchId: invoice.branchId,
 
-        amount:
-          data.amount,
+      amount: data.amount,
 
-        method,
+      method,
 
-        reference:
-          data.reference,
+      reference: data.reference,
 
-        status:
-          'COMPLETED',
+      status: 'COMPLETED',
 
-        notes:
-          data.notes,
+      notes: data.notes,
 
-        createdBy:
-          new Types.ObjectId(
-            user.sub,
-          ),
-      });
+      createdBy: new Types.ObjectId(user.sub),
+    });
 
-    const savedPayment =
-      await payment.save();
+    const savedPayment = await payment.save();
 
     // ---------------------------------------------------------
     // UPDATE INVOICE
     // ---------------------------------------------------------
 
-    invoice.amountPaid +=
-      data.amount;
+    invoice.amountPaid += data.amount;
 
-    invoice.balanceDue =
-      invoice.total -
-      invoice.amountPaid;
+    invoice.balanceDue = invoice.total - invoice.amountPaid;
 
-    if (
-      invoice.balanceDue <= 0
-    ) {
+    if (invoice.balanceDue <= 0) {
       invoice.balanceDue = 0;
 
-      invoice.paymentStatus =
-        'PAID';
+      invoice.paymentStatus = 'PAID';
     } else {
-      invoice.paymentStatus =
-        'PARTIAL';
+      invoice.paymentStatus = 'PARTIAL';
     }
 
     await invoice.save();
@@ -270,49 +179,34 @@ export class PaymentsService {
 
     await this.auditLogsService.create(
       {
-        userName:
-          user.email,
+        userName: user.email,
 
-        action:
-          'PAYMENT',
+        action: 'PAYMENT',
 
-        module:
-          'PAYMENTS',
+        module: 'PAYMENTS',
 
-        description:
-          `Payment ${savedPayment.paymentNumber} of ${savedPayment.amount} was recorded for invoice ${invoice.invoiceNumber}`,
+        description: `Payment ${savedPayment.paymentNumber} of ${savedPayment.amount} was recorded for invoice ${invoice.invoiceNumber}`,
 
-        recordId:
-          savedPayment._id.toString(),
+        recordId: savedPayment._id.toString(),
 
         metadata: {
-          paymentNumber:
-            savedPayment.paymentNumber,
+          paymentNumber: savedPayment.paymentNumber,
 
-          invoiceId:
-            invoice._id.toString(),
+          invoiceId: invoice._id.toString(),
 
-          invoiceNumber:
-            invoice.invoiceNumber,
+          invoiceNumber: invoice.invoiceNumber,
 
-          amount:
-            savedPayment.amount,
+          amount: savedPayment.amount,
 
-          method:
-            savedPayment.method,
+          method: savedPayment.method,
 
-          status:
-            savedPayment.status,
+          status: savedPayment.status,
 
-          previousAmountPaid:
-            invoice.amountPaid -
-            data.amount,
+          previousAmountPaid: invoice.amountPaid - data.amount,
 
-          newAmountPaid:
-            invoice.amountPaid,
+          newAmountPaid: invoice.amountPaid,
 
-          remainingBalance:
-            invoice.balanceDue,
+          remainingBalance: invoice.balanceDue,
         },
       },
 
@@ -326,23 +220,17 @@ export class PaymentsService {
   // FIND ALL PAYMENTS
   // =========================================================
 
-  async findAll(
-    user: {
-      sub: string;
-      email: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<PaymentDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async findAll(user: {
+    sub: string;
+    email: string;
+    role: string;
+    branchId: string;
+  }): Promise<PaymentDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.paymentModel
       .find(filter)
@@ -352,15 +240,9 @@ export class PaymentsService {
         'invoiceNumber total amountPaid balanceDue paymentStatus',
       )
 
-      .populate(
-        'customerId',
-        'customerNumber firstName lastName phone email',
-      )
+      .populate('customerId', 'customerNumber firstName lastName phone email')
 
-      .populate(
-        'createdBy',
-        'firstName lastName email',
-      )
+      .populate('createdBy', 'firstName lastName email')
 
       .sort({
         createdAt: -1,
@@ -383,54 +265,34 @@ export class PaymentsService {
       branchId: string;
     },
   ): Promise<PaymentDocument> {
-    if (
-      !Types.ObjectId.isValid(
-        id,
-      )
-    ) {
-      throw new NotFoundException(
-        'Invalid payment ID',
-      );
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Invalid payment ID');
     }
 
     const filter: any = {
       _id: id,
     };
 
-    if (
-      user.role !== 'SUPER_ADMIN'
-    ) {
-      filter.branchId =
-        new Types.ObjectId(
-          user.branchId,
-        );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const payment =
-      await this.paymentModel
-        .findOne(filter)
+    const payment = await this.paymentModel
+      .findOne(filter)
 
-        .populate(
-          'invoiceId',
-          'invoiceNumber total amountPaid balanceDue paymentStatus',
-        )
+      .populate(
+        'invoiceId',
+        'invoiceNumber total amountPaid balanceDue paymentStatus',
+      )
 
-        .populate(
-          'customerId',
-          'customerNumber firstName lastName phone email',
-        )
+      .populate('customerId', 'customerNumber firstName lastName phone email')
 
-        .populate(
-          'createdBy',
-          'firstName lastName email',
-        )
+      .populate('createdBy', 'firstName lastName email')
 
-        .exec();
+      .exec();
 
     if (!payment) {
-      throw new NotFoundException(
-        'Payment not found',
-      );
+      throw new NotFoundException('Payment not found');
     }
 
     return payment;
@@ -452,44 +314,25 @@ export class PaymentsService {
       branchId: string;
     },
   ): Promise<PaymentDocument> {
-    const payment =
-      await this.findById(
-        id,
-        user,
-      );
+    const payment = await this.findById(id, user);
 
     // ---------------------------------------------------------
     // NORMALIZE STATUS
     // ---------------------------------------------------------
 
-    const newStatus =
-      status.toUpperCase();
+    const newStatus = status.toUpperCase();
 
-    const allowedStatuses = [
-      'PENDING',
-      'COMPLETED',
-      'FAILED',
-      'REVERSED',
-    ];
+    const allowedStatuses = ['PENDING', 'COMPLETED', 'FAILED', 'REVERSED'];
 
-    if (
-      !allowedStatuses.includes(
-        newStatus,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid payment status',
-      );
+    if (!allowedStatuses.includes(newStatus)) {
+      throw new BadRequestException('Invalid payment status');
     }
 
     // ---------------------------------------------------------
     // NO CHANGE
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      newStatus
-    ) {
+    if (payment.status === newStatus) {
       return payment;
     }
 
@@ -497,13 +340,8 @@ export class PaymentsService {
     // REVERSED IS FINAL
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      'REVERSED'
-    ) {
-      throw new ConflictException(
-        'A reversed payment cannot change status',
-      );
+    if (payment.status === 'REVERSED') {
+      throw new ConflictException('A reversed payment cannot change status');
     }
 
     // ---------------------------------------------------------
@@ -516,17 +354,9 @@ export class PaymentsService {
     // Therefore it can ONLY become REVERSED.
     //
 
-    if (
-      payment.status ===
-      'COMPLETED'
-    ) {
-      if (
-        newStatus !==
-        'REVERSED'
-      ) {
-        throw new ConflictException(
-          'A completed payment can only be reversed',
-        );
+    if (payment.status === 'COMPLETED') {
+      if (newStatus !== 'REVERSED') {
+        throw new ConflictException('A completed payment can only be reversed');
       }
     }
 
@@ -534,17 +364,9 @@ export class PaymentsService {
     // PENDING PAYMENTS
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      'PENDING'
-    ) {
-      if (
-        newStatus ===
-        'REVERSED'
-      ) {
-        throw new ConflictException(
-          'A pending payment cannot be reversed',
-        );
+    if (payment.status === 'PENDING') {
+      if (newStatus === 'REVERSED') {
+        throw new ConflictException('A pending payment cannot be reversed');
       }
     }
 
@@ -552,30 +374,17 @@ export class PaymentsService {
     // FAILED PAYMENTS
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      'FAILED'
-    ) {
-      throw new ConflictException(
-        'A failed payment cannot change status',
-      );
+    if (payment.status === 'FAILED') {
+      throw new ConflictException('A failed payment cannot change status');
     }
 
     // ---------------------------------------------------------
     // REVERSE COMPLETED PAYMENT
     // ---------------------------------------------------------
 
-    if (
-      newStatus ===
-      'REVERSED'
-    ) {
-      if (
-        payment.status !==
-        'COMPLETED'
-      ) {
-        throw new ConflictException(
-          'Only completed payments can be reversed',
-        );
+    if (newStatus === 'REVERSED') {
+      if (payment.status !== 'COMPLETED') {
+        throw new ConflictException('Only completed payments can be reversed');
       }
 
       // -------------------------------------------------------
@@ -586,27 +395,13 @@ export class PaymentsService {
       // so safely extract its _id when necessary.
       //
 
-      const invoiceId =
-        (payment.invoiceId as any)?._id ??
-        payment.invoiceId;
+      const invoiceId = (payment.invoiceId as any)?._id ?? payment.invoiceId;
 
-      if (
-        !invoiceId ||
-        !Types.ObjectId.isValid(
-          invoiceId.toString(),
-        )
-      ) {
-        throw new BadRequestException(
-          'Invalid invoice reference on payment',
-        );
+      if (!invoiceId || !Types.ObjectId.isValid(invoiceId.toString())) {
+        throw new BadRequestException('Invalid invoice reference on payment');
       }
 
-      const invoice =
-        await this.invoiceModel
-          .findById(
-            invoiceId,
-          )
-          .exec();
+      const invoice = await this.invoiceModel.findById(invoiceId).exec();
 
       if (!invoice) {
         throw new NotFoundException(
@@ -618,48 +413,30 @@ export class PaymentsService {
       // VERIFY PAYMENT DOES NOT EXCEED ACCOUNTING
       // -------------------------------------------------------
 
-      if (
-        payment.amount >
-        invoice.amountPaid
-      ) {
+      if (payment.amount > invoice.amountPaid) {
         throw new ConflictException(
           'Payment amount exceeds the amount currently recorded on the invoice',
         );
       }
 
-      const previousAmountPaid =
-        invoice.amountPaid;
+      const previousAmountPaid = invoice.amountPaid;
 
       // -------------------------------------------------------
       // REMOVE PAYMENT FROM INVOICE
       // -------------------------------------------------------
 
-      invoice.amountPaid =
-        Math.max(
-          0,
-          invoice.amountPaid -
-            payment.amount,
-        );
+      invoice.amountPaid = Math.max(0, invoice.amountPaid - payment.amount);
 
-      invoice.balanceDue =
-        invoice.total -
-        invoice.amountPaid;
+      invoice.balanceDue = invoice.total - invoice.amountPaid;
 
-      if (
-        invoice.balanceDue <= 0
-      ) {
+      if (invoice.balanceDue <= 0) {
         invoice.balanceDue = 0;
 
-        invoice.paymentStatus =
-          'PAID';
-      } else if (
-        invoice.amountPaid > 0
-      ) {
-        invoice.paymentStatus =
-          'PARTIAL';
+        invoice.paymentStatus = 'PAID';
+      } else if (invoice.amountPaid > 0) {
+        invoice.paymentStatus = 'PARTIAL';
       } else {
-        invoice.paymentStatus =
-          'UNPAID';
+        invoice.paymentStatus = 'UNPAID';
       }
 
       await invoice.save();
@@ -668,11 +445,9 @@ export class PaymentsService {
       // UPDATE PAYMENT STATUS
       // -------------------------------------------------------
 
-      payment.status =
-        'REVERSED';
+      payment.status = 'REVERSED';
 
-      const savedPayment =
-        await payment.save();
+      const savedPayment = await payment.save();
 
       // -------------------------------------------------------
       // AUDIT LOG
@@ -680,47 +455,34 @@ export class PaymentsService {
 
       await this.auditLogsService.create(
         {
-          userName:
-            user.email,
+          userName: user.email,
 
-          action:
-            'STATUS_CHANGE',
+          action: 'STATUS_CHANGE',
 
-          module:
-            'PAYMENTS',
+          module: 'PAYMENTS',
 
-          description:
-            `Payment ${savedPayment.paymentNumber} was reversed`,
+          description: `Payment ${savedPayment.paymentNumber} was reversed`,
 
-          recordId:
-            savedPayment._id.toString(),
+          recordId: savedPayment._id.toString(),
 
           metadata: {
-            paymentNumber:
-              savedPayment.paymentNumber,
+            paymentNumber: savedPayment.paymentNumber,
 
-            invoiceId:
-              invoice._id.toString(),
+            invoiceId: invoice._id.toString(),
 
-            invoiceNumber:
-              invoice.invoiceNumber,
+            invoiceNumber: invoice.invoiceNumber,
 
-            amount:
-              savedPayment.amount,
+            amount: savedPayment.amount,
 
-            previousStatus:
-              'COMPLETED',
+            previousStatus: 'COMPLETED',
 
-            newStatus:
-              'REVERSED',
+            newStatus: 'REVERSED',
 
             previousAmountPaid,
 
-            newAmountPaid:
-              invoice.amountPaid,
+            newAmountPaid: invoice.amountPaid,
 
-            remainingBalance:
-              invoice.balanceDue,
+            remainingBalance: invoice.balanceDue,
           },
         },
 
@@ -734,14 +496,11 @@ export class PaymentsService {
     // UPDATE NON-FINANCIAL STATUS
     // ---------------------------------------------------------
 
-    const previousStatus =
-      payment.status;
+    const previousStatus = payment.status;
 
-    payment.status =
-      newStatus;
+    payment.status = newStatus;
 
-    const savedPayment =
-      await payment.save();
+    const savedPayment = await payment.save();
 
     // ---------------------------------------------------------
     // AUDIT LOG
@@ -749,34 +508,26 @@ export class PaymentsService {
 
     await this.auditLogsService.create(
       {
-        userName:
-          user.email,
+        userName: user.email,
 
-        action:
-          'STATUS_CHANGE',
+        action: 'STATUS_CHANGE',
 
-        module:
-          'PAYMENTS',
+        module: 'PAYMENTS',
 
-        description:
-          `Payment ${savedPayment.paymentNumber} changed from ${previousStatus} to ${newStatus}`,
+        description: `Payment ${savedPayment.paymentNumber} changed from ${previousStatus} to ${newStatus}`,
 
-        recordId:
-          savedPayment._id.toString(),
+        recordId: savedPayment._id.toString(),
 
         metadata: {
-          paymentNumber:
-            savedPayment.paymentNumber,
+          paymentNumber: savedPayment.paymentNumber,
 
           previousStatus,
 
           newStatus,
 
-          amount:
-            savedPayment.amount,
+          amount: savedPayment.amount,
 
-          method:
-            savedPayment.method,
+          method: savedPayment.method,
         },
       },
 
@@ -802,20 +553,13 @@ export class PaymentsService {
   ): Promise<{
     message: string;
   }> {
-    const payment =
-      await this.findById(
-        id,
-        user,
-      );
+    const payment = await this.findById(id, user);
 
     // ---------------------------------------------------------
     // COMPLETED PAYMENTS CANNOT BE DELETED
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      'COMPLETED'
-    ) {
+    if (payment.status === 'COMPLETED') {
       throw new ConflictException(
         'Completed payments cannot be deleted. Reverse the payment instead.',
       );
@@ -825,10 +569,7 @@ export class PaymentsService {
     // REVERSED PAYMENTS
     // ---------------------------------------------------------
 
-    if (
-      payment.status ===
-      'REVERSED'
-    ) {
+    if (payment.status === 'REVERSED') {
       throw new ConflictException(
         'Reversed payments cannot be deleted because they are part of the financial audit history',
       );
@@ -838,11 +579,7 @@ export class PaymentsService {
     // DELETE
     // ---------------------------------------------------------
 
-    await this.paymentModel
-      .findByIdAndDelete(
-        payment._id,
-      )
-      .exec();
+    await this.paymentModel.findByIdAndDelete(payment._id).exec();
 
     // ---------------------------------------------------------
     // AUDIT LOG
@@ -850,33 +587,24 @@ export class PaymentsService {
 
     await this.auditLogsService.create(
       {
-        userName:
-          user.email,
+        userName: user.email,
 
-        action:
-          'DELETE',
+        action: 'DELETE',
 
-        module:
-          'PAYMENTS',
+        module: 'PAYMENTS',
 
-        description:
-          `Payment ${payment.paymentNumber} was deleted`,
+        description: `Payment ${payment.paymentNumber} was deleted`,
 
-        recordId:
-          payment._id.toString(),
+        recordId: payment._id.toString(),
 
         metadata: {
-          paymentNumber:
-            payment.paymentNumber,
+          paymentNumber: payment.paymentNumber,
 
-          amount:
-            payment.amount,
+          amount: payment.amount,
 
-          method:
-            payment.method,
+          method: payment.method,
 
-          status:
-            payment.status,
+          status: payment.status,
 
           invoiceId:
             (payment.invoiceId as any)?._id?.toString() ??
@@ -888,8 +616,7 @@ export class PaymentsService {
     );
 
     return {
-      message:
-        'Payment deleted successfully',
+      message: 'Payment deleted successfully',
     };
   }
 
@@ -898,12 +625,6 @@ export class PaymentsService {
   // =========================================================
 
   private async generatePaymentNumber(): Promise<string> {
-    const count =
-      await this.paymentModel
-        .countDocuments();
-
-    return `PAY-${String(
-      count + 1,
-    ).padStart(6, '0')}`;
+    return nextSequenceNumber(this.paymentModel, 'paymentNumber', 'PAY');
   }
 }

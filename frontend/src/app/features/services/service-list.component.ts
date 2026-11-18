@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AuthService } from '../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { KesPipe } from '../../shared/pipes/kes.pipe';
@@ -12,13 +11,15 @@ import { SearchInputComponent } from '../../shared/components/search-input.compo
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
 import { errorMessage } from '../../core/models/api.models';
 import { Service } from '../../core/models/catalog.models';
+import { ELEVATED_ROLES } from '../../core/models/api.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-service-list',
   standalone: true,
   imports: [
     FormsModule, PageHeaderComponent, SearchInputComponent, StatusBadgeComponent,
-    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe,
+    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, HasRoleDirective,
   ],
   template: `
     <app-page-header title="Services" subtitle="Service offerings">
@@ -64,11 +65,9 @@ import { Service } from '../../core/models/catalog.models';
                     (click)="openEdit(s)">Edit</button>
                   <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
                     (click)="toggleStatus(s)">{{ s.isActive ? 'Disable' : 'Enable' }}</button>
-                  @if (auth.isSuperAdmin()) {
-                    <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
+                  <button *hasRole="ELEVATED_ROLES" type="button" class="text-xs font-medium text-rose-600 hover:underline"
                       (click)="askDelete(s)">Delete</button>
-                  }
-                </td>
+                  </td>
               </tr>
             }
           </tbody>
@@ -128,9 +127,9 @@ import { Service } from '../../core/models/catalog.models';
   `,
 })
 export class ServiceListComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
-  readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly items = signal<Service[]>([]);

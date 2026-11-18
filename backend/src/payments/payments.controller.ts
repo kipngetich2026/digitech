@@ -27,7 +27,7 @@ export class PaymentsController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   create(
     @Body() createPaymentDto: CreatePaymentDto,
     @Req() req: any,
@@ -39,7 +39,7 @@ export class PaymentsController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
     return this.paymentsService.findAll(
       req.user,
@@ -47,7 +47,7 @@ export class PaymentsController {
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findOne(
     @Param('id') id: string,
     @Req() req: any,
@@ -59,7 +59,7 @@ export class PaymentsController {
   }
 
   @Patch(':id/status')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   updateStatus(
     @Param('id') id: string,
     @Body()
@@ -74,7 +74,7 @@ export class PaymentsController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   remove(
     @Param('id') id: string,
     @Req() req: any,

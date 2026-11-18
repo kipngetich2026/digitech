@@ -12,14 +12,15 @@ import { SearchInputComponent } from '../../shared/components/search-input.compo
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
 import { errorMessage } from '../../core/models/api.models';
 import { Product } from '../../core/models/catalog.models';
-import { AuthService } from '../../core/services/auth.service';
+import { ELEVATED_ROLES } from '../../core/models/api.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
   imports: [
     FormsModule, RouterLink, PageHeaderComponent, SearchInputComponent, StatusBadgeComponent,
-    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe,
+    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, HasRoleDirective,
   ],
   template: `
     <app-page-header title="Products" subtitle="Sellable inventory items">
@@ -68,11 +69,9 @@ import { AuthService } from '../../core/services/auth.service';
                     (click)="openEdit(p)">Edit</button>
                   <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
                     (click)="toggleStatus(p)">{{ p.isActive ? 'Disable' : 'Enable' }}</button>
-                  @if (auth.isSuperAdmin()) {
-                    <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
+                  <button *hasRole="ELEVATED_ROLES" type="button" class="text-xs font-medium text-rose-600 hover:underline"
                       (click)="askDelete(p)">Delete</button>
-                  }
-                </td>
+                  </td>
               </tr>
             }
           </tbody>
@@ -151,9 +150,9 @@ import { AuthService } from '../../core/services/auth.service';
   `,
 })
 export class ProductListComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
-  readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly items = signal<Product[]>([]);

@@ -45,6 +45,7 @@ export class AuditLogsController {
   @Post()
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   create(
@@ -67,6 +68,7 @@ export class AuditLogsController {
   @Get()
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findAll(
@@ -85,6 +87,7 @@ export class AuditLogsController {
   @Get('action/:action')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findByAction(
@@ -107,6 +110,7 @@ export class AuditLogsController {
   @Get('module/:module')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findByModule(
@@ -129,6 +133,7 @@ export class AuditLogsController {
   @Get('user/:userId')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findByUser(
@@ -151,6 +156,7 @@ export class AuditLogsController {
   @Get('record/:recordId')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findByRecord(
@@ -173,6 +179,7 @@ export class AuditLogsController {
   @Get(':id')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findOne(

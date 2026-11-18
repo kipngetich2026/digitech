@@ -19,7 +19,7 @@ export class ReportsController {
   ) {}
 
   @Get('overview')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getOverview(@Req() req: any) {
     return this.reportsService.getOverview(
       req.user,
@@ -27,7 +27,7 @@ export class ReportsController {
   }
 
   @Get('sales')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getSalesReport(@Req() req: any) {
     return this.reportsService.getSalesReport(
       req.user,
@@ -35,7 +35,7 @@ export class ReportsController {
   }
 
   @Get('finance')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getFinanceReport(@Req() req: any) {
     return this.reportsService.getFinanceReport(
       req.user,
@@ -43,7 +43,7 @@ export class ReportsController {
   }
 
   @Get('inventory')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getInventoryReport(@Req() req: any) {
     return this.reportsService.getInventoryReport(
       req.user,
@@ -51,7 +51,7 @@ export class ReportsController {
   }
 
   @Get('recent')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getRecentActivity(@Req() req: any) {
     return this.reportsService.getRecentActivity(
       req.user,

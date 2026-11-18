@@ -54,8 +54,10 @@ import { User } from '../../core/models/auth.models';
                   <span class="rounded-full px-2 py-0.5 text-xs font-medium"
                     [class.bg-indigo-50]="u.role === 'SUPER_ADMIN'"
                     [class.text-indigo-700]="u.role === 'SUPER_ADMIN'"
-                    [class.bg-slate-100]="u.role !== 'SUPER_ADMIN'"
-                    [class.text-slate-600]="u.role !== 'SUPER_ADMIN'">{{ u.role }}</span>
+                    [class.bg-amber-50]="u.role === 'MANAGER'"
+                    [class.text-amber-700]="u.role === 'MANAGER'"
+                    [class.bg-slate-100]="u.role === 'STAFF'"
+                    [class.text-slate-600]="u.role === 'STAFF'">{{ u.role }}</span>
                 </td>
                 <td class="px-4 py-3 text-slate-600">{{ u.phone || '—' }}</td>
                 <td class="px-4 py-3"><app-status-badge [status]="u.isActive ? 'ACTIVE' : 'INACTIVE'" /></td>

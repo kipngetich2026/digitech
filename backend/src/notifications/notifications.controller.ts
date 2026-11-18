@@ -27,7 +27,7 @@ export class NotificationsController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   create(
     @Body() createNotificationDto: CreateNotificationDto,
     @Req() req: any,
@@ -39,7 +39,7 @@ export class NotificationsController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
     return this.notificationsService.findMyNotifications(
       req.user,
@@ -47,7 +47,7 @@ export class NotificationsController {
   }
 
   @Get('unread')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findUnread(@Req() req: any) {
     return this.notificationsService.findUnread(
       req.user,
@@ -55,7 +55,7 @@ export class NotificationsController {
   }
 
   @Get('unread/count')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   getUnreadCount(@Req() req: any) {
     return this.notificationsService.getUnreadCount(
       req.user,
@@ -63,7 +63,7 @@ export class NotificationsController {
   }
 
   @Get('all')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   findAllNotifications(@Req() req: any) {
     return this.notificationsService.findAll(
       req.user,
@@ -71,7 +71,7 @@ export class NotificationsController {
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findOne(
     @Param('id') id: string,
     @Req() req: any,
@@ -83,7 +83,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   markAsRead(
     @Param('id') id: string,
     @Req() req: any,
@@ -95,7 +95,7 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   markAllAsRead(@Req() req: any) {
     return this.notificationsService.markAllAsRead(
       req.user,
@@ -103,7 +103,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   remove(
     @Param('id') id: string,
     @Req() req: any,

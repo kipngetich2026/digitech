@@ -5,22 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
+import { nextSequenceNumber } from '../common/sequence';
 import { InjectModel } from '@nestjs/mongoose';
 
-import {
-  Model,
-  Types,
-} from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import {
   StockMovement,
   StockMovementDocument,
 } from './schemas/stock-movement.schema';
 
-import {
-  Product,
-  ProductDocument,
-} from '../products/schemas/product.schema';
+import { Product, ProductDocument } from '../products/schemas/product.schema';
 
 @Injectable()
 export class InventoryService {
@@ -51,97 +47,68 @@ export class InventoryService {
     },
   ): Promise<StockMovementDocument> {
     if (!Types.ObjectId.isValid(data.productId)) {
-      throw new BadRequestException(
-        'Invalid product ID',
-      );
+      throw new BadRequestException('Invalid product ID');
     }
 
     if (!Types.ObjectId.isValid(user.branchId)) {
-      throw new BadRequestException(
-        'Invalid branch ID',
-      );
+      throw new BadRequestException('Invalid branch ID');
     }
 
     if (!Types.ObjectId.isValid(user.sub)) {
-      throw new BadRequestException(
-        'Invalid user ID',
-      );
+      throw new BadRequestException('Invalid user ID');
     }
 
     if (data.quantity <= 0) {
-      throw new BadRequestException(
-        'Quantity must be greater than zero',
-      );
+      throw new BadRequestException('Quantity must be greater than zero');
     }
 
-    const movementType =
-      data.movementType.toUpperCase();
+    const movementType = data.movementType.toUpperCase();
 
-    const allowedTypes = [
-      'STOCK_IN',
-      'STOCK_OUT',
-      'ADJUSTMENT',
-      'RETURN',
-    ];
+    const allowedTypes = ['STOCK_IN', 'STOCK_OUT', 'ADJUSTMENT', 'RETURN'];
 
     if (!allowedTypes.includes(movementType)) {
-      throw new BadRequestException(
-        'Invalid stock movement type',
-      );
+      throw new BadRequestException('Invalid stock movement type');
     }
 
-    const product =
-      await this.productModel
-        .findById(data.productId)
-        .exec();
+    const product = await this.productModel.findById(data.productId).exec();
 
     if (!product) {
-      throw new NotFoundException(
-        'Product not found',
-      );
+      throw new NotFoundException('Product not found');
     }
 
     // Branch isolation
     if (
-      user.role !== 'SUPER_ADMIN' &&
-      product.branchId.toString() !==
-        user.branchId
+      !isElevated(user.role) &&
+      product.branchId.toString() !== user.branchId
     ) {
       throw new ConflictException(
         'You cannot manage inventory for another branch',
       );
     }
 
-    const previousQuantity =
-      product.stockQuantity;
+    const previousQuantity = product.stockQuantity;
 
     let newQuantity: number;
 
     // STOCK IN
     if (movementType === 'STOCK_IN') {
-      newQuantity =
-        previousQuantity + data.quantity;
+      newQuantity = previousQuantity + data.quantity;
     }
 
     // STOCK OUT
     else if (movementType === 'STOCK_OUT') {
-      if (
-        data.quantity >
-        previousQuantity
-      ) {
+      if (data.quantity > previousQuantity) {
         throw new ConflictException(
           `Insufficient stock. Available stock: ${previousQuantity}`,
         );
       }
 
-      newQuantity =
-        previousQuantity - data.quantity;
+      newQuantity = previousQuantity - data.quantity;
     }
 
     // RETURN
     else if (movementType === 'RETURN') {
-      newQuantity =
-        previousQuantity + data.quantity;
+      newQuantity = previousQuantity + data.quantity;
     }
 
     // ADJUSTMENT
@@ -150,54 +117,42 @@ export class InventoryService {
     }
 
     if (newQuantity < 0) {
-      throw new ConflictException(
-        'Stock quantity cannot be negative',
-      );
+      throw new ConflictException('Stock quantity cannot be negative');
     }
 
     // Update product stock
-    product.stockQuantity =
-      newQuantity;
+    product.stockQuantity = newQuantity;
 
     await product.save();
 
     // Generate movement number
-    const count =
-      await this.stockMovementModel.countDocuments();
+    const movementNumber = await nextSequenceNumber(
+      this.stockMovementModel,
+      'movementNumber',
+      'MOV',
+    );
 
-    const movementNumber =
-      `MOV-${String(count + 1).padStart(6, '0')}`;
+    const movement = new this.stockMovementModel({
+      movementNumber,
 
-    const movement =
-      new this.stockMovementModel({
-        movementNumber,
+      productId: product._id,
 
-        productId:
-          product._id,
+      branchId: product.branchId,
 
-        branchId:
-          product.branchId,
+      movementType,
 
-        movementType,
+      quantity: data.quantity,
 
-        quantity:
-          data.quantity,
+      previousQuantity,
 
-        previousQuantity,
+      newQuantity,
 
-        newQuantity,
+      reason: data.reason,
 
-        reason:
-          data.reason,
+      reference: data.reference,
 
-        reference:
-          data.reference,
-
-        createdBy:
-          new Types.ObjectId(
-            user.sub,
-          ),
-      });
+      createdBy: new Types.ObjectId(user.sub),
+    });
 
     return movement.save();
   }
@@ -206,22 +161,16 @@ export class InventoryService {
   // GET CURRENT STOCK
   // =========================================================
 
-  async getCurrentStock(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<ProductDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async getCurrentStock(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<ProductDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.productModel
       .find(filter)
@@ -238,22 +187,16 @@ export class InventoryService {
   // GET LOW STOCK PRODUCTS
   // =========================================================
 
-  async getLowStock(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<ProductDocument[]> {
-    const branchFilter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async getLowStock(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<ProductDocument[]> {
+    const branchFilter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.productModel
       .find({
@@ -262,15 +205,10 @@ export class InventoryService {
         isActive: true,
 
         $expr: {
-          $lte: [
-            '$stockQuantity',
-            '$reorderLevel',
-          ],
+          $lte: ['$stockQuantity', '$reorderLevel'],
         },
       })
-      .select(
-        'sku name category stockQuantity reorderLevel branchId',
-      )
+      .select('sku name category stockQuantity reorderLevel branchId')
       .sort({
         stockQuantity: 1,
       })
@@ -281,22 +219,16 @@ export class InventoryService {
   // GET OUT OF STOCK PRODUCTS
   // =========================================================
 
-  async getOutOfStock(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<ProductDocument[]> {
-    const branchFilter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async getOutOfStock(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<ProductDocument[]> {
+    const branchFilter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.productModel
       .find({
@@ -306,9 +238,7 @@ export class InventoryService {
 
         stockQuantity: 0,
       })
-      .select(
-        'sku name category stockQuantity reorderLevel branchId',
-      )
+      .select('sku name category stockQuantity reorderLevel branchId')
       .sort({
         name: 1,
       })
@@ -319,33 +249,21 @@ export class InventoryService {
   // GET STOCK MOVEMENTS
   // =========================================================
 
-  async findAllMovements(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<StockMovementDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async findAllMovements(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<StockMovementDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.stockMovementModel
       .find(filter)
-      .populate(
-        'productId',
-        'sku name category stockQuantity',
-      )
-      .populate(
-        'createdBy',
-        'firstName lastName email',
-      )
+      .populate('productId', 'sku name category stockQuantity')
+      .populate('createdBy', 'firstName lastName email')
       .sort({
         createdAt: -1,
       })
@@ -365,26 +283,18 @@ export class InventoryService {
     },
   ): Promise<StockMovementDocument[]> {
     if (!Types.ObjectId.isValid(productId)) {
-      throw new BadRequestException(
-        'Invalid product ID',
-      );
+      throw new BadRequestException('Invalid product ID');
     }
 
-    const product =
-      await this.productModel
-        .findById(productId)
-        .exec();
+    const product = await this.productModel.findById(productId).exec();
 
     if (!product) {
-      throw new NotFoundException(
-        'Product not found',
-      );
+      throw new NotFoundException('Product not found');
     }
 
     if (
-      user.role !== 'SUPER_ADMIN' &&
-      product.branchId.toString() !==
-        user.branchId
+      !isElevated(user.role) &&
+      product.branchId.toString() !== user.branchId
     ) {
       throw new ConflictException(
         'You cannot view inventory for another branch',
@@ -393,16 +303,11 @@ export class InventoryService {
 
     return this.stockMovementModel
       .find({
-        productId:
-          new Types.ObjectId(productId),
+        productId: new Types.ObjectId(productId),
 
-        branchId:
-          product.branchId,
+        branchId: product.branchId,
       })
-      .populate(
-        'createdBy',
-        'firstName lastName email',
-      )
+      .populate('createdBy', 'firstName lastName email')
       .sort({
         createdAt: -1,
       })
@@ -422,44 +327,30 @@ export class InventoryService {
     },
   ): Promise<StockMovementDocument> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(
-        'Invalid movement ID',
-      );
+      throw new NotFoundException('Invalid movement ID');
     }
 
     const filter: any = {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId =
-        new Types.ObjectId(
-          user.branchId,
-        );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const movement =
-      await this.stockMovementModel
-        .findOne(filter)
-        .populate(
-          'productId',
-          'sku name category stockQuantity',
-        )
-        .populate(
-          'createdBy',
-          'firstName lastName email',
-        )
-        .exec();
+    const movement = await this.stockMovementModel
+      .findOne(filter)
+      .populate('productId', 'sku name category stockQuantity')
+      .populate('createdBy', 'firstName lastName email')
+      .exec();
 
     if (!movement) {
-      throw new NotFoundException(
-        'Stock movement not found',
-      );
+      throw new NotFoundException('Stock movement not found');
     }
 
     return movement;
   }
-    // =========================================================
+  // =========================================================
   // PROCESS SALE FROM ORDER
   // =========================================================
 
@@ -476,122 +367,87 @@ export class InventoryService {
     },
   ): Promise<StockMovementDocument> {
     if (!Types.ObjectId.isValid(data.productId)) {
-      throw new BadRequestException(
-        'Invalid product ID',
-      );
+      throw new BadRequestException('Invalid product ID');
     }
 
     if (!Types.ObjectId.isValid(data.orderId)) {
-      throw new BadRequestException(
-        'Invalid order ID',
-      );
+      throw new BadRequestException('Invalid order ID');
     }
 
     if (!Types.ObjectId.isValid(user.sub)) {
-      throw new BadRequestException(
-        'Invalid user ID',
-      );
+      throw new BadRequestException('Invalid user ID');
     }
 
     if (!Types.ObjectId.isValid(user.branchId)) {
-      throw new BadRequestException(
-        'Invalid branch ID',
-      );
+      throw new BadRequestException('Invalid branch ID');
     }
 
     if (data.quantity <= 0) {
-      throw new BadRequestException(
-        'Sale quantity must be greater than zero',
-      );
+      throw new BadRequestException('Sale quantity must be greater than zero');
     }
 
-    const product =
-      await this.productModel
-        .findById(data.productId)
-        .exec();
+    const product = await this.productModel.findById(data.productId).exec();
 
     if (!product) {
-      throw new NotFoundException(
-        'Product not found',
-      );
+      throw new NotFoundException('Product not found');
     }
 
     // Branch isolation
     if (
-      user.role !== 'SUPER_ADMIN' &&
-      product.branchId.toString() !==
-        user.branchId
+      !isElevated(user.role) &&
+      product.branchId.toString() !== user.branchId
     ) {
       throw new ConflictException(
         'You cannot manage inventory for another branch',
       );
     }
 
-    const previousQuantity =
-      product.stockQuantity;
+    const previousQuantity = product.stockQuantity;
 
-    if (
-      previousQuantity <
-      data.quantity
-    ) {
+    if (previousQuantity < data.quantity) {
       throw new ConflictException(
         `Insufficient stock for product: ${product.name}. Available stock: ${previousQuantity}`,
       );
     }
 
-    const newQuantity =
-      previousQuantity - data.quantity;
+    const newQuantity = previousQuantity - data.quantity;
 
     // Update product stock
-    product.stockQuantity =
-      newQuantity;
+    product.stockQuantity = newQuantity;
 
     await product.save();
 
     // Generate movement number
-    const count =
-      await this.stockMovementModel.countDocuments();
-
-    const movementNumber =
-      `MOV-${String(count + 1).padStart(6, '0')}`;
+    const movementNumber = await nextSequenceNumber(
+      this.stockMovementModel,
+      'movementNumber',
+      'MOV',
+    );
 
     // Create SALE movement
-    const movement =
-      new this.stockMovementModel({
-        movementNumber,
+    const movement = new this.stockMovementModel({
+      movementNumber,
 
-        productId:
-          product._id,
+      productId: product._id,
 
-        branchId:
-          product.branchId,
+      branchId: product.branchId,
 
-        movementType:
-          'SALE',
+      movementType: 'SALE',
 
-        quantity:
-          data.quantity,
+      quantity: data.quantity,
 
-        previousQuantity,
+      previousQuantity,
 
-        newQuantity,
+      newQuantity,
 
-        reason:
-          'Stock deducted from completed order',
+      reason: 'Stock deducted from completed order',
 
-        orderId:
-          new Types.ObjectId(
-            data.orderId,
-          ),
+      orderId: new Types.ObjectId(data.orderId),
 
-        reference:
-          `ORDER-${data.orderId}`,
+      reference: `ORDER-${data.orderId}`,
 
-        createdBy:
-          new Types.ObjectId(
-            user.sub,
-          ),
-      });
+      createdBy: new Types.ObjectId(user.sub),
+    });
 
     return movement.save();
   }
@@ -600,22 +456,16 @@ export class InventoryService {
   // INVENTORY SUMMARY
   // =========================================================
 
-  async getInventorySummary(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ) {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId:
-              new Types.ObjectId(
-                user.branchId,
-              ),
-          };
+  async getInventorySummary(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }) {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     const [
       totalProducts,
@@ -625,9 +475,7 @@ export class InventoryService {
       stockValue,
       costValue,
     ] = await Promise.all([
-      this.productModel.countDocuments(
-        filter,
-      ),
+      this.productModel.countDocuments(filter),
 
       this.productModel.countDocuments({
         ...filter,
@@ -640,10 +488,7 @@ export class InventoryService {
         isActive: true,
 
         $expr: {
-          $lte: [
-            '$stockQuantity',
-            '$reorderLevel',
-          ],
+          $lte: ['$stockQuantity', '$reorderLevel'],
         },
       }),
 
@@ -669,10 +514,7 @@ export class InventoryService {
 
             total: {
               $sum: {
-                $multiply: [
-                  '$sellingPrice',
-                  '$stockQuantity',
-                ],
+                $multiply: ['$sellingPrice', '$stockQuantity'],
               },
             },
           },
@@ -693,10 +535,7 @@ export class InventoryService {
 
             total: {
               $sum: {
-                $multiply: [
-                  '$costPrice',
-                  '$stockQuantity',
-                ],
+                $multiply: ['$costPrice', '$stockQuantity'],
               },
             },
           },
@@ -710,11 +549,9 @@ export class InventoryService {
       lowStockProducts,
       outOfStockProducts,
 
-      stockValue:
-        stockValue[0]?.total ?? 0,
+      stockValue: stockValue[0]?.total ?? 0,
 
-      costValue:
-        costValue[0]?.total ?? 0,
+      costValue: costValue[0]?.total ?? 0,
     };
   }
 }

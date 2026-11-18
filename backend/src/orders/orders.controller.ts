@@ -33,6 +33,7 @@ export class OrdersController {
   @Post()
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   create(
@@ -51,6 +52,7 @@ export class OrdersController {
   @Get()
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findAll(
@@ -65,6 +67,7 @@ export class OrdersController {
   @Get(':id')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findOne(
@@ -83,6 +86,7 @@ export class OrdersController {
   @Patch(':id')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   update(
@@ -105,6 +109,7 @@ export class OrdersController {
   @Patch(':id/status')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   updateStatus(
@@ -127,6 +132,7 @@ export class OrdersController {
   @Delete(':id')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
   )
   remove(
     @Param('id')

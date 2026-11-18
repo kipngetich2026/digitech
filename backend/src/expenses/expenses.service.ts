@@ -5,17 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
+import { nextSequenceNumber } from '../common/sequence';
 import { InjectModel } from '@nestjs/mongoose';
 
-import {
-  Model,
-  Types,
-} from 'mongoose';
+import { Model, Types } from 'mongoose';
 
-import {
-  Expense,
-  ExpenseDocument,
-} from './schemas/expense.schema';
+import { Expense, ExpenseDocument } from './schemas/expense.schema';
 
 @Injectable()
 export class ExpensesService {
@@ -42,73 +38,52 @@ export class ExpensesService {
     },
   ): Promise<ExpenseDocument> {
     if (!Types.ObjectId.isValid(user.branchId)) {
-      throw new BadRequestException(
-        'Invalid branch ID',
-      );
+      throw new BadRequestException('Invalid branch ID');
     }
 
     if (data.amount <= 0) {
-      throw new BadRequestException(
-        'Expense amount must be greater than zero',
-      );
+      throw new BadRequestException('Expense amount must be greater than zero');
     }
 
-    const count =
-      await this.expenseModel.countDocuments();
+    const expenseNumber = await nextSequenceNumber(
+      this.expenseModel,
+      'expenseNumber',
+      'EXP',
+    );
 
-    const expenseNumber =
-      `EXP-${String(count + 1).padStart(6, '0')}`;
-
-    const expense =
-      new this.expenseModel({
-        expenseNumber,
-        title: data.title,
-        category: data.category,
-        description: data.description,
-        amount: data.amount,
-        paymentMethod:
-          data.paymentMethod.toUpperCase(),
-        reference: data.reference,
-        expenseDate: new Date(data.expenseDate),
-        branchId: new Types.ObjectId(
-          user.branchId,
-        ),
-        status: 'PENDING',
-        notes: data.notes,
-        createdBy: new Types.ObjectId(
-          user.sub,
-        ),
-      });
+    const expense = new this.expenseModel({
+      expenseNumber,
+      title: data.title,
+      category: data.category,
+      description: data.description,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod.toUpperCase(),
+      reference: data.reference,
+      expenseDate: new Date(data.expenseDate),
+      branchId: new Types.ObjectId(user.branchId),
+      status: 'PENDING',
+      notes: data.notes,
+      createdBy: new Types.ObjectId(user.sub),
+    });
 
     return expense.save();
   }
 
-  async findAll(
-    user: {
-      sub: string;
-      role: string;
-      branchId: string;
-    },
-  ): Promise<ExpenseDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId: new Types.ObjectId(
-              user.branchId,
-            ),
-          };
+  async findAll(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<ExpenseDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
     return this.expenseModel
       .find(filter)
-      .populate(
-        'createdBy',
-        'firstName lastName email',
-      )
-      .populate(
-        'approvedBy',
-        'firstName lastName email',
-      )
+      .populate('createdBy', 'firstName lastName email')
+      .populate('approvedBy', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -122,37 +97,25 @@ export class ExpensesService {
     },
   ): Promise<ExpenseDocument> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(
-        'Invalid expense ID',
-      );
+      throw new NotFoundException('Invalid expense ID');
     }
 
     const filter: any = {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId =
-        new Types.ObjectId(user.branchId);
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const expense =
-      await this.expenseModel
-        .findOne(filter)
-        .populate(
-          'createdBy',
-          'firstName lastName email',
-        )
-        .populate(
-          'approvedBy',
-          'firstName lastName email',
-        )
-        .exec();
+    const expense = await this.expenseModel
+      .findOne(filter)
+      .populate('createdBy', 'firstName lastName email')
+      .populate('approvedBy', 'firstName lastName email')
+      .exec();
 
     if (!expense) {
-      throw new NotFoundException(
-        'Expense not found',
-      );
+      throw new NotFoundException('Expense not found');
     }
 
     return expense;
@@ -176,25 +139,16 @@ export class ExpensesService {
       branchId: string;
     },
   ): Promise<ExpenseDocument> {
-    const expense =
-      await this.findById(id, user);
+    const expense = await this.findById(id, user);
 
-    if (
-      expense.status === 'PAID' ||
-      expense.status === 'REJECTED'
-    ) {
+    if (expense.status === 'PAID' || expense.status === 'REJECTED') {
       throw new ConflictException(
         'Paid or rejected expenses cannot be updated',
       );
     }
 
-    if (
-      data.amount !== undefined &&
-      data.amount <= 0
-    ) {
-      throw new BadRequestException(
-        'Expense amount must be greater than zero',
-      );
+    if (data.amount !== undefined && data.amount <= 0) {
+      throw new BadRequestException('Expense amount must be greater than zero');
     }
 
     if (data.title !== undefined) {
@@ -214,8 +168,7 @@ export class ExpensesService {
     }
 
     if (data.paymentMethod !== undefined) {
-      expense.paymentMethod =
-        data.paymentMethod.toUpperCase();
+      expense.paymentMethod = data.paymentMethod.toUpperCase();
     }
 
     if (data.reference !== undefined) {
@@ -223,8 +176,7 @@ export class ExpensesService {
     }
 
     if (data.expenseDate !== undefined) {
-      expense.expenseDate =
-        new Date(data.expenseDate);
+      expense.expenseDate = new Date(data.expenseDate);
     }
 
     if (data.notes !== undefined) {
@@ -243,47 +195,30 @@ export class ExpensesService {
       branchId: string;
     },
   ): Promise<ExpenseDocument> {
-    const expense =
-      await this.findById(id, user);
+    const expense = await this.findById(id, user);
 
     if (expense.status === 'PAID') {
-      throw new ConflictException(
-        'A paid expense cannot change status',
-      );
+      throw new ConflictException('A paid expense cannot change status');
     }
 
-    if (
-      expense.status === 'REJECTED' &&
-      status !== 'PENDING'
-    ) {
+    if (expense.status === 'REJECTED' && status !== 'PENDING') {
       throw new ConflictException(
         'A rejected expense cannot change to this status',
       );
     }
 
-    if (
-      expense.status === 'PENDING' &&
-      status === 'PAID'
-    ) {
+    if (expense.status === 'PENDING' && status === 'PAID') {
       throw new BadRequestException(
         'An expense must be approved before it can be marked as paid',
       );
     }
 
-    if (
-      expense.status === 'APPROVED' &&
-      status === 'REJECTED'
-    ) {
-      throw new BadRequestException(
-        'An approved expense cannot be rejected',
-      );
+    if (expense.status === 'APPROVED' && status === 'REJECTED') {
+      throw new BadRequestException('An approved expense cannot be rejected');
     }
 
-    if (
-      status === 'APPROVED'
-    ) {
-      expense.approvedBy =
-        new Types.ObjectId(user.sub);
+    if (status === 'APPROVED') {
+      expense.approvedBy = new Types.ObjectId(user.sub);
 
       expense.approvedAt = new Date();
     }
@@ -301,24 +236,16 @@ export class ExpensesService {
       branchId: string;
     },
   ): Promise<{ message: string }> {
-    const expense =
-      await this.findById(id, user);
+    const expense = await this.findById(id, user);
 
-    if (
-      expense.status === 'PAID'
-    ) {
-      throw new ConflictException(
-        'Paid expenses cannot be deleted',
-      );
+    if (expense.status === 'PAID') {
+      throw new ConflictException('Paid expenses cannot be deleted');
     }
 
-    await this.expenseModel
-      .findByIdAndDelete(expense._id)
-      .exec();
+    await this.expenseModel.findByIdAndDelete(expense._id).exec();
 
     return {
-      message:
-        'Expense deleted successfully',
+      message: 'Expense deleted successfully',
     };
   }
 }

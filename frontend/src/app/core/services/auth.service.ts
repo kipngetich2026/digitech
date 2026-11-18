@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, of, tap, throwError } from 'rxjs';
+import { ELEVATED_ROLES, Role } from '../models/api.models';
 import {
   LoginRequest,
   LoginResponse,
@@ -45,10 +46,21 @@ export class AuthService {
   readonly isSuperAdmin = computed(
     () => this._user()?.role === 'SUPER_ADMIN',
   );
+  /** SUPER_ADMIN or MANAGER — everything except administration. */
+  readonly isElevated = computed(() =>
+    this.hasRole(...ELEVATED_ROLES),
+  );
+  readonly role = computed(() => this._user()?.role ?? null);
   readonly fullName = computed(() => {
     const u = this._user();
     return u ? `${u.firstName} ${u.lastName}` : '';
   });
+
+  /** True when the signed-in user's role is included in `roles`. */
+  hasRole(...roles: Role[]): boolean {
+    const current = this._user()?.role;
+    return !!current && roles.includes(current);
+  }
 
   login(req: LoginRequest): Observable<LoginResponse> {
     return this.api
