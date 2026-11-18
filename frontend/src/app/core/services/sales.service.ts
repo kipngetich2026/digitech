@@ -1,26 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import {
-  CreateOrderRequest,
-  Order,
-  UpdateOrderRequest,
-} from '../models/order.models';
-import {
-  CreateInvoiceRequest,
-  Invoice,
-  UpdateInvoiceRequest,
-} from '../models/invoice.models';
+import { HttpClient, HttpResponse } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { CreateOrderRequest, Order, UpdateOrderRequest } from '../models/order.models';
+import { CreateInvoiceRequest, Invoice, UpdateInvoiceRequest } from '../models/invoice.models';
 import { CreatePaymentRequest, Payment } from '../models/payment.models';
-import {
-  CreateExpenseRequest,
-  Expense,
-  UpdateExpenseRequest,
-} from '../models/expense.models';
+import { CreateExpenseRequest, Expense, UpdateExpenseRequest } from '../models/expense.models';
 
 @Injectable({ providedIn: 'root' })
 export class SalesService {
   private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
 
   // Orders
   listOrders(): Observable<Order[]> {
@@ -74,6 +65,14 @@ export class SalesService {
   }
   deletePayment(id: string): Observable<{ message: string }> {
     return this.api.delete<{ message: string }>(`/payments/${id}`);
+  }
+
+  /** Download auto-generated payment receipt PDF (with headers for filename). */
+  downloadReceipt(id: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${environment.apiUrl}/payments/${id}/receipt`, {
+      responseType: 'blob',
+      observe: 'response',
+    });
   }
 
   // Expenses

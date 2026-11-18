@@ -14,6 +14,9 @@ import { errorMessage } from '../../core/models/api.models';
       <div class="w-full max-w-md">
         <div class="mb-6 text-center">
           <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-lg font-bold text-white">D</span>
+          <img src="/logo.png" alt="" width="48" height="48" aria-hidden="true"
+            class="mx-auto h-12 w-12 rounded-xl object-cover"
+            onerror="this.remove()" onload="this.previousElementSibling?.remove()" />
           <h1 class="mt-4 text-2xl font-semibold text-slate-900">Sign in</h1>
           <p class="mt-1 text-sm text-slate-500">Digitech Hub collection &amp; sales console</p>
         </div>

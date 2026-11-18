@@ -4,16 +4,14 @@ import { PassportModule } from '@nestjs/passport';
 
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { ReceiptService } from './receipt.service';
 
-import {
-  Payment,
-  PaymentSchema,
-} from './schemas/payment.schema';
+import { Payment, PaymentSchema } from './schemas/payment.schema';
 
-import {
-  Invoice,
-  InvoiceSchema,
-} from '../invoices/schemas/invoice.schema';
+import { Invoice, InvoiceSchema } from '../invoices/schemas/invoice.schema';
+
+import { Branch, BranchSchema } from '../branches/schemas/branch.schema';
+
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
@@ -27,19 +25,22 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
         name: Invoice.name,
         schema: InvoiceSchema,
       },
+      {
+        name: Branch.name,
+        schema: BranchSchema,
+      },
     ]),
 
     PassportModule.register({
       defaultStrategy: 'jwt',
     }),
-      AuditLogsModule,
+    AuditLogsModule,
   ],
 
   controllers: [PaymentsController],
 
-  providers: [PaymentsService],
+  providers: [PaymentsService, ReceiptService],
 
-  exports: [PaymentsService],
-
+  exports: [PaymentsService, ReceiptService],
 })
 export class PaymentsModule {}

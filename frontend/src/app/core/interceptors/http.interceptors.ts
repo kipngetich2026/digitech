@@ -65,7 +65,21 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse && err.status !== 401) {
-        toast.error(errorMessage(err.error ?? err));
+        if (err.error instanceof Blob) {
+          // Binary error bodies (e.g. failed PDF download) — parse JSON if possible
+          err.error
+            .text()
+            .then((text: string) => {
+              try {
+                toast.error(errorMessage(JSON.parse(text)));
+              } catch {
+                toast.error('Download failed');
+              }
+            })
+            .catch(() => toast.error('Download failed'));
+        } else {
+          toast.error(errorMessage(err.error ?? err));
+        }
       }
       return throwError(() => err);
     }),
