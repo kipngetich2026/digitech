@@ -98,6 +98,7 @@ export class ShellComponent {
   }
 
   logout(): void {
-    this.auth.logout();
+    this.userMenuOpen = false;
+    this.auth.logout().subscribe({ error: () => undefined });
   }
 }

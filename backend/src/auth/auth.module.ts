@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -8,12 +9,25 @@ import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { BranchesModule } from '../branches/branches.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import {
+  RefreshToken,
+  RefreshTokenSchema,
+} from './schemas/refresh-token.schema';
+import {
+  RevokedToken,
+  RevokedTokenSchema,
+} from './schemas/revoked-token.schema';
 
 @Module({
   imports: [
     ConfigModule,
     UsersModule,
     BranchesModule,
+
+    MongooseModule.forFeature([
+      { name: RefreshToken.name, schema: RefreshTokenSchema },
+      { name: RevokedToken.name, schema: RevokedTokenSchema },
+    ]),
 
     PassportModule.register({}),
 

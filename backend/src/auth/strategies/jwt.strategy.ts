@@ -1,15 +1,22 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
 import { PassportStrategy } from '@nestjs/passport';
+import { Model } from 'mongoose';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { UsersService } from '../../users/users.service';
+import {
+  RevokedToken,
+  RevokedTokenDocument,
+} from '../schemas/revoked-token.schema';
 
 export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
   branchId: string;
+  jti?: string;
 }
 
 @Injectable()
@@ -17,6 +24,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    @InjectModel(RevokedToken.name)
+    private readonly revokedTokenModel: Model<RevokedTokenDocument>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -26,6 +35,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    if (
+      payload.jti &&
+      (await this.revokedTokenModel.exists({ jti: payload.jti }))
+    ) {
+      throw new UnauthorizedException(
+        'Session has ended. Please sign in again',
+      );
+    }
+
     const user = await this.usersService.findById(payload.sub);
 
     if (!user) {
@@ -39,6 +57,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       sub: user._id.toString(),
       id: user._id.toString(),
+      jti: payload.jti,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

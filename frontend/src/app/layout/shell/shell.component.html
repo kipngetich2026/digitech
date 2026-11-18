@@ -38,6 +38,14 @@
       <p class="text-[11px] text-slate-400">Signed in as</p>
       <p class="truncate text-sm font-medium text-slate-800">{{ auth.fullName() }}</p>
       <p class="text-[11px] uppercase tracking-wide text-indigo-600">{{ auth.user()?.role }}</p>
+      <button
+        type="button"
+        class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+        (click)="logout()"
+      >
+        <span aria-hidden="true">↪</span>
+        Sign out
+      </button>
     </div>
   </aside>
 
@@ -75,6 +83,16 @@
             </span>
           }
         </a>
+
+        <button
+          type="button"
+          class="rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+          (click)="logout()"
+          aria-label="Sign out"
+        >
+          <span class="hidden sm:inline">Sign out</span>
+          <span class="sm:hidden" aria-hidden="true">↪</span>
+        </button>
 
         <div class="relative">
           <button
