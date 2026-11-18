@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AuthService } from '../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { KesPipe } from '../../shared/pipes/kes.pipe';
@@ -10,23 +9,22 @@ import { LoadingComponent } from '../../shared/components/loading.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { SearchInputComponent } from '../../shared/components/search-input.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
-import { errorMessage } from '../../core/models/api.models';
+import { errorMessage, ELEVATED_ROLES } from '../../core/models/api.models';
 import { Employee, EmploymentType } from '../../core/models/catalog.models';
 import { User } from '../../core/models/auth.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-employee-list',
   standalone: true,
   imports: [
     FormsModule, PageHeaderComponent, SearchInputComponent, StatusBadgeComponent,
-    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe,
+    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, HasRoleDirective,
   ],
   template: `
     <app-page-header title="Employees" subtitle="Link users to employment records">
-      @if (auth.isSuperAdmin()) {
-        <button type="button" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          (click)="openCreate()">+ New employee</button>
-      }
+      <button *hasRole="ELEVATED_ROLES" type="button" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+        (click)="openCreate()">+ New employee</button>
     </app-page-header>
 
     <div class="mb-4 flex items-center justify-between gap-3">
@@ -66,15 +64,13 @@ import { User } from '../../core/models/auth.models';
                 <td class="px-4 py-3 text-slate-600">{{ e.employmentType }}</td>
                 <td class="px-4 py-3 text-right font-medium">{{ e.basicSalary | kes }}</td>
                 <td class="px-4 py-3"><app-status-badge [status]="e.isActive ? 'ACTIVE' : 'INACTIVE'" /></td>
-                <td class="px-4 py-3 text-right">
-                  @if (auth.isSuperAdmin()) {
-                    <button type="button" class="mr-3 text-xs font-medium text-indigo-600 hover:underline"
-                      (click)="openEdit(e)">Edit</button>
-                    <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
-                      (click)="toggleStatus(e)">{{ e.isActive ? 'Deactivate' : 'Activate' }}</button>
-                    <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
-                      (click)="askDelete(e)">Delete</button>
-                  }
+                <td class="px-4 py-3 text-right" *hasRole="ELEVATED_ROLES">
+                  <button type="button" class="mr-3 text-xs font-medium text-indigo-600 hover:underline"
+                    (click)="openEdit(e)">Edit</button>
+                  <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
+                    (click)="toggleStatus(e)">{{ e.isActive ? 'Deactivate' : 'Activate' }}</button>
+                  <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
+                    (click)="askDelete(e)">Delete</button>
                 </td>
               </tr>
             }
@@ -158,9 +154,10 @@ import { User } from '../../core/models/auth.models';
   `,
 })
 export class EmployeeListComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
-  readonly auth = inject(AuthService);
+
 
   readonly loading = signal(true);
   readonly items = signal<Employee[]>([]);

@@ -3,6 +3,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
 import { InjectModel } from '@nestjs/mongoose';
 
 import {
@@ -776,7 +777,7 @@ export class ReportsService {
     role: string;
     branchId: string;
   }): Record<string, any> {
-    if (user.role === 'SUPER_ADMIN') {
+    if (isElevated(user.role)) {
       return {};
     }
 

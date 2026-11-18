@@ -31,10 +31,28 @@ export interface RegisterRequest {
   branchId: string;
 }
 
-export interface LoginResponse {
-  message: string;
+export interface TokenPair {
   accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export interface LoginResponse extends TokenPair {
+  message: string;
   user: SanitizedUser;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshResponse extends TokenPair {
+  message?: string;
+  user: SanitizedUser;
+}
+
+export interface LogoutRequest {
+  refreshToken?: string;
 }
 
 export interface RegisterResponse {

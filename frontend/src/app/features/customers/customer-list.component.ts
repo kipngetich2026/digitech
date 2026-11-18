@@ -10,6 +10,8 @@ import { SearchInputComponent } from '../../shared/components/search-input.compo
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
 import { errorMessage } from '../../core/models/api.models';
 import { Customer } from '../../core/models/customer.models';
+import { ELEVATED_ROLES } from '../../core/models/api.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-customer-list',
@@ -22,6 +24,7 @@ import { Customer } from '../../core/models/customer.models';
     EmptyStateComponent,
     LoadingComponent,
     ConfirmDialogComponent,
+    HasRoleDirective,
   ],
   template: `
     <app-page-header title="Customers" subtitle="Manage customer records">
@@ -69,8 +72,8 @@ import { Customer } from '../../core/models/customer.models';
                     (click)="openEdit(c)">Edit</button>
                   <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
                     (click)="toggleStatus(c)">{{ c.isActive ? 'Deactivate' : 'Activate' }}</button>
-                  <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
-    (click)="askDelete(c)">Delete</button>
+                  <button *hasRole="ELEVATED_ROLES" type="button" class="text-xs font-medium text-rose-600 hover:underline"
+                    (click)="askDelete(c)">Delete</button>
                 </td>
               </tr>
             }
@@ -132,6 +135,7 @@ import { Customer } from '../../core/models/customer.models';
   `,
 })
 export class CustomerListComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
 

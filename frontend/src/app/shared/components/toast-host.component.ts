@@ -9,13 +9,15 @@ import { ToastService } from '../../core/services/toast.service';
       @for (t of toast.toasts(); track t.id) {
         <div
           class="rounded-lg px-4 py-3 text-sm font-medium shadow-lg ring-1"
-          [class]="
-            t.kind === 'success'
-              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-              : t.kind === 'error'
-                ? 'bg-rose-50 text-rose-800 ring-rose-200'
-                : 'bg-sky-50 text-sky-800 ring-sky-200'
-          "
+          [class.bg-emerald-50]="t.kind === 'success'"
+          [class.text-emerald-800]="t.kind === 'success'"
+          [class.ring-emerald-200]="t.kind === 'success'"
+          [class.bg-rose-50]="t.kind === 'error'"
+          [class.text-rose-800]="t.kind === 'error'"
+          [class.ring-rose-200]="t.kind === 'error'"
+          [class.bg-sky-50]="t.kind === 'info'"
+          [class.text-sky-800]="t.kind === 'info'"
+          [class.ring-sky-200]="t.kind === 'info'"
           role="status"
         >
           {{ t.text }}

@@ -4,13 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
+import { nextSequenceNumber } from '../common/sequence';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import {
-  Customer,
-  CustomerDocument,
-} from './schemas/customer.schema';
+import { Customer, CustomerDocument } from './schemas/customer.schema';
 
 @Injectable()
 export class CustomersService {
@@ -28,22 +27,23 @@ export class CustomersService {
     }
 
     const existingEmail = data.email
-      ? await this.customerModel.findOne({
-          email: data.email.toLowerCase(),
-        }).exec()
+      ? await this.customerModel
+          .findOne({
+            email: data.email.toLowerCase(),
+          })
+          .exec()
       : null;
 
     if (existingEmail) {
-      throw new ConflictException(
-        'A customer with this email already exists',
-      );
+      throw new ConflictException('A customer with this email already exists');
     }
 
     if (data.phone) {
-      const existingPhone =
-        await this.customerModel.findOne({
+      const existingPhone = await this.customerModel
+        .findOne({
           phone: data.phone,
-        }).exec();
+        })
+        .exec();
 
       if (existingPhone) {
         throw new ConflictException(
@@ -52,9 +52,11 @@ export class CustomersService {
       }
     }
 
-    const count = await this.customerModel.countDocuments();
-
-    const customerNumber = `CUS-${String(count + 1).padStart(6, '0')}`;
+    const customerNumber = await nextSequenceNumber(
+      this.customerModel,
+      'customerNumber',
+      'CUS',
+    );
 
     const customer = new this.customerModel({
       ...data,
@@ -67,20 +69,18 @@ export class CustomersService {
     return customer.save();
   }
 
-  async findAll(
-    user: { sub: string; role: string; branchId: string },
-  ): Promise<CustomerDocument[]> {
-    const filter =
-      user.role === 'SUPER_ADMIN'
-        ? {}
-        : {
-            branchId: new Types.ObjectId(user.branchId),
-          };
+  async findAll(user: {
+    sub: string;
+    role: string;
+    branchId: string;
+  }): Promise<CustomerDocument[]> {
+    const filter = isElevated(user.role)
+      ? {}
+      : {
+          branchId: new Types.ObjectId(user.branchId),
+        };
 
-    return this.customerModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.customerModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
   async findById(
@@ -95,15 +95,11 @@ export class CustomersService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId = new Types.ObjectId(
-        user.branchId,
-      );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const customer = await this.customerModel
-      .findOne(filter)
-      .exec();
+    const customer = await this.customerModel.findOne(filter).exec();
 
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -125,20 +121,19 @@ export class CustomersService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId = new Types.ObjectId(
-        user.branchId,
-      );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
     if (data.email) {
       data.email = data.email.toLowerCase();
 
-      const existingEmail =
-        await this.customerModel.findOne({
+      const existingEmail = await this.customerModel
+        .findOne({
           email: data.email,
           _id: { $ne: id },
-        }).exec();
+        })
+        .exec();
 
       if (existingEmail) {
         throw new ConflictException(
@@ -148,11 +143,12 @@ export class CustomersService {
     }
 
     if (data.phone) {
-      const existingPhone =
-        await this.customerModel.findOne({
+      const existingPhone = await this.customerModel
+        .findOne({
           phone: data.phone,
           _id: { $ne: id },
-        }).exec();
+        })
+        .exec();
 
       if (existingPhone) {
         throw new ConflictException(
@@ -161,15 +157,12 @@ export class CustomersService {
       }
     }
 
-    const customer =
-      await this.customerModel.findOneAndUpdate(
-        filter,
-        data,
-        {
-          new: true,
-          runValidators: true,
-        },
-      ).exec();
+    const customer = await this.customerModel
+      .findOneAndUpdate(filter, data, {
+        new: true,
+        runValidators: true,
+      })
+      .exec();
 
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -191,21 +184,20 @@ export class CustomersService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId = new Types.ObjectId(
-        user.branchId,
-      );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const customer =
-      await this.customerModel.findOneAndUpdate(
+    const customer = await this.customerModel
+      .findOneAndUpdate(
         filter,
         { isActive },
         {
           new: true,
           runValidators: true,
         },
-      ).exec();
+      )
+      .exec();
 
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -226,14 +218,11 @@ export class CustomersService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
-      filter.branchId = new Types.ObjectId(
-        user.branchId,
-      );
+    if (!isElevated(user.role)) {
+      filter.branchId = new Types.ObjectId(user.branchId);
     }
 
-    const customer =
-      await this.customerModel.findOneAndDelete(filter).exec();
+    const customer = await this.customerModel.findOneAndDelete(filter).exec();
 
     if (!customer) {
       throw new NotFoundException('Customer not found');

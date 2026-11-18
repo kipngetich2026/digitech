@@ -1,24 +1,60 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { errorMessage } from '../models/api.models';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
-  const token = auth.token();
 
-  const authReq = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : req;
+  const isPublicAuth =
+    req.url.includes('/auth/login') ||
+    req.url.includes('/auth/register') ||
+    req.url.includes('/auth/refresh');
+  const isLogout = req.url.includes('/auth/logout');
+
+  const token = auth.token();
+  const authReq =
+    token && !isPublicAuth
+      ? req.clone({
+          setHeaders: { Authorization: `Bearer ${token}` },
+        })
+      : req;
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && !req.url.includes('/auth/login')) {
-        auth.logout();
+      if (err.status !== 401) {
+        return throwError(() => err);
       }
-      return throwError(() => err);
+
+      if (isPublicAuth || isLogout) {
+        return throwError(() => err);
+      }
+
+      if (!auth.refreshToken()) {
+        auth.clearSession();
+        return throwError(() => err);
+      }
+
+      return auth.refresh().pipe(
+        switchMap(() => {
+          const refreshed = auth.token();
+          return next(
+            refreshed
+              ? req.clone({
+                  setHeaders: {
+                    Authorization: `Bearer ${refreshed}`,
+                  },
+                })
+              : req,
+          );
+        }),
+        catchError((refreshError: unknown) => {
+          auth.clearSession();
+          return throwError(() => refreshError);
+        }),
+      );
     }),
   );
 };

@@ -2,22 +2,22 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SalesService } from '../../core/services/sales.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AuthService } from '../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { KesPipe } from '../../shared/pipes/kes.pipe';
 import { DatePipe } from '../../shared/pipes/date.pipe';
 import { LoadingComponent } from '../../shared/components/loading.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
-import { errorMessage } from '../../core/models/api.models';
+import { errorMessage, ELEVATED_ROLES } from '../../core/models/api.models';
 import { Order, OrderStatus } from '../../core/models/order.models';
+import { HasRoleDirective } from '../../core/directives/has-role.directive';
 
 @Component({
   selector: 'app-order-detail',
   standalone: true,
   imports: [
     RouterLink, PageHeaderComponent, LoadingComponent, StatusBadgeComponent,
-    KesPipe, DatePipe, ConfirmDialogComponent,
+    KesPipe, DatePipe, ConfirmDialogComponent, HasRoleDirective,
   ],
   template: `
     <app-page-header title="Order" backLink="/orders" backLabel="Orders" />
@@ -114,8 +114,8 @@ import { Order, OrderStatus } from '../../core/models/order.models';
             </a>
           }
 
-          @if (auth.isSuperAdmin() && o.status === 'PENDING') {
-            <button type="button"
+          @if (o.status === 'PENDING') {
+            <button *hasRole="ELEVATED_ROLES" type="button"
               class="w-full rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
               (click)="deleteOpen = true">Delete order</button>
           }
@@ -128,11 +128,11 @@ import { Order, OrderStatus } from '../../core/models/order.models';
   `,
 })
 export class OrderDetailComponent implements OnInit {
+  protected readonly ELEVATED_ROLES = ELEVATED_ROLES;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sales = inject(SalesService);
   private readonly toast = inject(ToastService);
-  readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly order = signal<Order | null>(null);

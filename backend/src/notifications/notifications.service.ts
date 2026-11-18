@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
 import { InjectModel } from '@nestjs/mongoose';
 
 import {
@@ -79,7 +80,7 @@ export class NotificationsService {
     // Staff can only create notifications
     // for users within their own branch.
     if (
-      creator.role !== 'SUPER_ADMIN' &&
+      !isElevated(creator.role) &&
       targetUser.branchId.toString() !==
         creator.branchId
     ) {
@@ -219,7 +220,7 @@ export class NotificationsService {
     };
 
     // Normal users can only see their own notifications.
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.userId =
         new Types.ObjectId(user.sub);
       filter.branchId =
@@ -267,7 +268,7 @@ export class NotificationsService {
     };
 
     // Staff can only mark their own notification.
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.userId =
         new Types.ObjectId(user.sub);
 
@@ -339,7 +340,7 @@ export class NotificationsService {
     },
   ): Promise<NotificationDocument[]> {
     const filter =
-      user.role === 'SUPER_ADMIN'
+      isElevated(user.role)
         ? {}
         : {
             branchId: new Types.ObjectId(
@@ -379,7 +380,7 @@ export class NotificationsService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.userId =
         new Types.ObjectId(user.sub);
 

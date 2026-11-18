@@ -5,7 +5,16 @@ export interface ApiError {
   error?: string;
 }
 
-export type Role = 'SUPER_ADMIN' | 'STAFF';
+export type Role = 'SUPER_ADMIN' | 'MANAGER' | 'STAFF';
+
+/** SUPER_ADMIN + MANAGER: elevated ops (delete, cross-branch, …). */
+export const ELEVATED_ROLES: Role[] = ['SUPER_ADMIN', 'MANAGER'];
+
+/** SUPER_ADMIN only: administration (users, branches). */
+export const ADMIN_ROLES: Role[] = ['SUPER_ADMIN'];
+
+/** Every authenticated role. */
+export const ALL_ROLES: Role[] = ['SUPER_ADMIN', 'MANAGER', 'STAFF'];
 
 export interface ObjectIdString {
   $oid?: string;

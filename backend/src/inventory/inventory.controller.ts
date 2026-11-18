@@ -33,6 +33,7 @@ export class InventoryController {
   @Post('movement')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   createMovement(
@@ -54,6 +55,7 @@ export class InventoryController {
   @Get('summary')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   getSummary(
@@ -71,6 +73,7 @@ export class InventoryController {
   @Get('stock')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   getCurrentStock(
@@ -88,6 +91,7 @@ export class InventoryController {
   @Get('low-stock')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   getLowStock(
@@ -105,6 +109,7 @@ export class InventoryController {
   @Get('out-of-stock')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   getOutOfStock(
@@ -122,6 +127,7 @@ export class InventoryController {
   @Get('movements')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findAllMovements(
@@ -139,6 +145,7 @@ export class InventoryController {
   @Get('product/:productId/movements')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findProductMovements(
@@ -160,6 +167,7 @@ export class InventoryController {
   @Get('movement/:id')
   @Roles(
     'SUPER_ADMIN',
+    'MANAGER',
     'STAFF',
   )
   findMovement(

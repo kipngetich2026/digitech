@@ -28,7 +28,7 @@ export class EmployeesController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   create(
     @Body() createEmployeeDto: CreateEmployeeDto,
     @Req() req: any,
@@ -40,7 +40,7 @@ export class EmployeesController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
     return this.employeesService.findAll(
       req.user,
@@ -48,7 +48,7 @@ export class EmployeesController {
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findOne(
     @Param('id') id: string,
     @Req() req: any,
@@ -60,7 +60,7 @@ export class EmployeesController {
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   update(
     @Param('id') id: string,
     @Body() updateEmployeeDto: UpdateEmployeeDto,
@@ -74,7 +74,7 @@ export class EmployeesController {
   }
 
   @Patch(':id/status')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   updateStatus(
     @Param('id') id: string,
     @Body()
@@ -89,7 +89,7 @@ export class EmployeesController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   remove(
     @Param('id') id: string,
     @Req() req: any,

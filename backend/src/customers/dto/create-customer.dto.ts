@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateCustomerDto {
@@ -20,7 +21,8 @@ export class CreateCustomerDto {
   @MaxLength(50)
   lastName: string;
 
-  @IsOptional()
+  // Treat empty string / whitespace as "no email" (optional field).
+  @ValidateIf((o: CreateCustomerDto) => !!o.email?.trim())
   @IsEmail()
   email?: string;
 

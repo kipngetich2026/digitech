@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Role } from '../../core/models/api.models';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/reports.service';
 import { ToastHostComponent } from '../../shared/components/toast-host.component';
@@ -8,7 +9,8 @@ interface NavItem {
   label: string;
   link: string;
   icon: string;
-  adminOnly?: boolean;
+  /** Roles allowed to see this item. Omit for any authenticated role. */
+  roles?: readonly Role[];
 }
 
 @Component({
@@ -58,9 +60,9 @@ export class ShellComponent {
     {
       title: 'Administration',
       items: [
-        { label: 'Users', link: '/users', icon: '👤', adminOnly: true },
-        { label: 'Branches', link: '/branches', icon: '🏢', adminOnly: true },
-        { label: 'Audit logs', link: '/audit-logs', icon: '📜', adminOnly: true },
+        { label: 'Users', link: '/users', icon: '👤', roles: ['SUPER_ADMIN'] },
+        { label: 'Branches', link: '/branches', icon: '🏢', roles: ['SUPER_ADMIN'] },
+        { label: 'Audit logs', link: '/audit-logs', icon: '📜' },
         { label: 'Notifications', link: '/notifications', icon: '🔔' },
       ],
     },
@@ -72,11 +74,10 @@ export class ShellComponent {
   }
 
   visibleGroups(): Array<{ title: string; items: NavItem[] }> {
-    const admin = this.auth.isSuperAdmin();
     return this.groups
       .map((g) => ({
         ...g,
-        items: g.items.filter((i) => !i.adminOnly || admin),
+        items: g.items.filter((i) => !i.roles || this.auth.hasRole(...i.roles)),
       }))
       .filter((g) => g.items.length > 0);
   }
@@ -98,6 +99,7 @@ export class ShellComponent {
   }
 
   logout(): void {
-    this.auth.logout();
+    this.userMenuOpen = false;
+    this.auth.logout().subscribe({ error: () => undefined });
   }
 }

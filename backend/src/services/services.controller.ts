@@ -28,7 +28,7 @@ export class ServicesController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   create(
     @Body() createServiceDto: CreateServiceDto,
     @Req() req: any,
@@ -40,7 +40,7 @@ export class ServicesController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
     return this.servicesService.findAll(
       req.user,
@@ -48,7 +48,7 @@ export class ServicesController {
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findOne(
     @Param('id') id: string,
     @Req() req: any,
@@ -60,7 +60,7 @@ export class ServicesController {
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   update(
     @Param('id') id: string,
     @Body() updateServiceDto: UpdateServiceDto,
@@ -74,7 +74,7 @@ export class ServicesController {
   }
 
   @Patch(':id/status')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   updateStatus(
     @Param('id') id: string,
     @Body()
@@ -89,7 +89,7 @@ export class ServicesController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   remove(
     @Param('id') id: string,
     @Req() req: any,

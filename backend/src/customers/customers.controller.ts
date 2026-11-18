@@ -28,7 +28,7 @@ export class CustomersController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   create(
     @Body() createCustomerDto: CreateCustomerDto,
     @Req() req: any,
@@ -40,13 +40,13 @@ export class CustomersController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
     return this.customersService.findAll(req.user);
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findOne(
     @Param('id') id: string,
     @Req() req: any,
@@ -58,7 +58,7 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   update(
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,
@@ -72,7 +72,7 @@ export class CustomersController {
   }
 
   @Patch(':id/status')
-  @Roles('SUPER_ADMIN', 'STAFF')
+  @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   updateStatus(
     @Param('id') id: string,
     @Body() updateCustomerStatusDto: UpdateCustomerStatusDto,
@@ -86,7 +86,7 @@ export class CustomersController {
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANAGER')
   remove(
     @Param('id') id: string,
     @Req() req: any,

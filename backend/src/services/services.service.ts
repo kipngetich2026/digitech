@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isElevated } from '../common/roles';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
@@ -60,7 +61,7 @@ export class ServicesService {
     },
   ): Promise<ServiceDocument[]> {
     const filter =
-      user.role === 'SUPER_ADMIN'
+      isElevated(user.role)
         ? {}
         : {
             branchId: new Types.ObjectId(
@@ -92,7 +93,7 @@ export class ServicesService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.branchId = new Types.ObjectId(
         user.branchId,
       );
@@ -131,7 +132,7 @@ export class ServicesService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.branchId = new Types.ObjectId(
         user.branchId,
       );
@@ -197,7 +198,7 @@ export class ServicesService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.branchId = new Types.ObjectId(
         user.branchId,
       );
@@ -242,7 +243,7 @@ export class ServicesService {
       _id: id,
     };
 
-    if (user.role !== 'SUPER_ADMIN') {
+    if (!isElevated(user.role)) {
       filter.branchId = new Types.ObjectId(
         user.branchId,
       );

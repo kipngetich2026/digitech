@@ -86,6 +86,74 @@ async function seed() {
       );
     }
 
+    // ---------------------------------------------
+    // 3. Create MANAGER
+    // ---------------------------------------------
+
+    const managerEmail = 'manager@digitechhub.co.ke';
+    const existingManager =
+      await usersService.findByEmail(managerEmail);
+
+    if (!existingManager) {
+      const password = 'ChangeMe@12345';
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      await usersService.create({
+        firstName: 'Branch',
+        lastName: 'Manager',
+        email: managerEmail,
+        password: hashedPassword,
+        role: 'MANAGER',
+        branchId: branch._id,
+        isActive: true,
+      });
+
+      console.log('✓ MANAGER created');
+      console.log('================================');
+      console.log(' MANAGER CREDENTIALS');
+      console.log('================================');
+      console.log(`Email: ${managerEmail}`);
+      console.log(`Password: ${password}`);
+      console.log('================================');
+      console.log('');
+    } else {
+      console.log('✓ MANAGER already exists');
+    }
+
+    // ---------------------------------------------
+    // 4. Create STAFF
+    // ---------------------------------------------
+
+    const staffEmail = 'staff@digitechhub.co.ke';
+    const existingStaff =
+      await usersService.findByEmail(staffEmail);
+
+    if (!existingStaff) {
+      const password = 'ChangeMe@12345';
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      await usersService.create({
+        firstName: 'Front',
+        lastName: 'Staff',
+        email: staffEmail,
+        password: hashedPassword,
+        role: 'STAFF',
+        branchId: branch._id,
+        isActive: true,
+      });
+
+      console.log('✓ STAFF created');
+      console.log('================================');
+      console.log(' STAFF CREDENTIALS');
+      console.log('================================');
+      console.log(`Email: ${staffEmail}`);
+      console.log(`Password: ${password}`);
+      console.log('================================');
+      console.log('');
+    } else {
+      console.log('✓ STAFF already exists');
+    }
+
     console.log('');
     console.log(
       '✓ Database seeding completed successfully.',

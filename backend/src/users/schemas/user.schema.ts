@@ -51,6 +51,7 @@ export class User {
     required: true,
     default: 'STAFF',
     uppercase: true,
+    enum: ['SUPER_ADMIN', 'MANAGER', 'STAFF'],
   })
   role: string;
 
