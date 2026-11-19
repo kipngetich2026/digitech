@@ -7,10 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import {
-  User,
-  UserDocument,
-} from './schemas/user.schema';
+import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -27,9 +24,7 @@ export class UsersService {
       .exec();
 
     if (existingEmail) {
-      throw new ConflictException(
-        'A user with this email already exists',
-      );
+      throw new ConflictException('A user with this email already exists');
     }
 
     const user = new this.userModel({
@@ -40,17 +35,11 @@ export class UsersService {
     return user.save();
   }
 
-  async findById(
-    id: string,
-  ): Promise<UserDocument | null> {
-    return this.userModel
-      .findById(id)
-      .exec();
+  async findById(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).exec();
   }
 
-  async findByEmail(
-    email: string,
-  ): Promise<UserDocument | null> {
+  async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel
       .findOne({
         email: email.toLowerCase(),
@@ -67,14 +56,9 @@ export class UsersService {
       .exec();
   }
 
-  async update(
-    id: string,
-    data: Partial<User>,
-  ): Promise<UserDocument> {
+  async update(id: string, data: Partial<User>): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(
-        'Invalid user ID',
-      );
+      throw new NotFoundException('Invalid user ID');
     }
 
     const user = await this.userModel
@@ -95,32 +79,31 @@ export class UsersService {
       .exec();
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found',
-      );
+      throw new NotFoundException('User not found');
     }
 
     return user;
   }
 
-  async remove(
-    id: string,
-  ): Promise<{ message: string }> {
+  async touchActivity(id: string): Promise<void> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(
-        'Invalid user ID',
-      );
+      return;
     }
 
-    const user =
-      await this.userModel
-        .findByIdAndDelete(id)
-        .exec();
+    await this.userModel
+      .updateOne({ _id: id }, { $set: { lastActivityAt: new Date() } })
+      .exec();
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Invalid user ID');
+    }
+
+    const user = await this.userModel.findByIdAndDelete(id).exec();
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found',
-      );
+      throw new NotFoundException('User not found');
     }
 
     return {

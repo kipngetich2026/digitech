@@ -1,7 +1,5 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -28,37 +26,56 @@ interface AuthenticatedUser {
   jti?: string;
 }
 
+export function readIdleTimeoutMs(configService: ConfigService): number {
+  const raw = configService.get<string>('IDLE_TIMEOUT_MINUTES');
+  const minutes = Number.parseInt(raw ?? '', 10);
+  const safe = Number.isFinite(minutes) && minutes > 0 ? minutes : 30;
+  return safe * 60 * 1000;
+}
+
+export function assertNotIdle(
+  lastActivityAt: Date | undefined | null,
+  idleTimeoutMs: number,
+): void {
+  if (!lastActivityAt) return;
+
+  const idleMs = Date.now() - new Date(lastActivityAt).getTime();
+
+  if (idleMs > idleTimeoutMs) {
+    throw new UnauthorizedException(
+      'Session has ended due to inactivity. Please sign in again',
+    );
+  }
+}
+
 @Injectable()
 export class AuthService {
   private static readonly ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
-  private static readonly REFRESH_TOKEN_TTL_SECONDS =
-    7 * 24 * 60 * 60;
+  private static readonly REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
   constructor(
     private readonly usersService: UsersService,
     private readonly branchesService: BranchesService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     @InjectModel(RefreshToken.name)
     private readonly refreshTokenModel: Model<RefreshTokenDocument>,
     @InjectModel(RevokedToken.name)
     private readonly revokedTokenModel: Model<RevokedTokenDocument>,
   ) {}
 
+  private get idleTimeoutMs(): number {
+    return readIdleTimeoutMs(this.configService);
+  }
+
   async register(registerDto: RegisterDto) {
-    const branch = await this.branchesService.findById(
-      registerDto.branchId,
-    );
+    const branch = await this.branchesService.findById(registerDto.branchId);
 
     if (!branch || !branch.isActive) {
-      throw new UnauthorizedException(
-        'Invalid or inactive branch',
-      );
+      throw new UnauthorizedException('Invalid or inactive branch');
     }
 
-    const hashedPassword = await bcrypt.hash(
-      registerDto.password,
-      12,
-    );
+    const hashedPassword = await bcrypt.hash(registerDto.password, 12);
 
     const user = await this.usersService.create({
       firstName: registerDto.firstName,
@@ -78,20 +95,14 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.findByEmail(
-      loginDto.email,
-    );
+    const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException(
-        'Your account is inactive',
-      );
+      throw new UnauthorizedException('Your account is inactive');
     }
 
     const passwordMatches = await bcrypt.compare(
@@ -100,12 +111,12 @@ export class AuthService {
     );
 
     if (!passwordMatches) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    user.lastLogin = new Date();
+    const now = new Date();
+    user.lastLogin = now;
+    user.lastActivityAt = now;
     await user.save();
 
     const tokens = await this.issueTokens(user);
@@ -113,8 +124,21 @@ export class AuthService {
     return {
       message: 'Login successful',
       ...tokens,
+      idleTimeoutSeconds: Math.round(this.idleTimeoutMs / 1000),
       user: this.sanitizeUser(user),
     };
+  }
+
+  async touchActivity(user: AuthenticatedUser | undefined) {
+    const userId = user?.sub;
+
+    if (!userId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    await this.usersService.touchActivity(userId);
+
+    return { message: 'Activity recorded' };
   }
 
   async refresh(dto: RefreshTokenDto) {
@@ -129,9 +153,7 @@ export class AuthService {
     );
 
     if (!storedToken) {
-      throw new UnauthorizedException(
-        'Invalid or expired refresh token',
-      );
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
     const user = await this.usersService.findById(
@@ -139,15 +161,16 @@ export class AuthService {
     );
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException(
-        'User account not found or inactive',
-      );
+      throw new UnauthorizedException('User account not found or inactive');
     }
+
+    assertNotIdle(user.lastActivityAt, this.idleTimeoutMs);
 
     const tokens = await this.issueTokens(user);
 
     return {
       ...tokens,
+      idleTimeoutSeconds: Math.round(this.idleTimeoutMs / 1000),
       user: this.sanitizeUser(user),
     };
   }
@@ -166,8 +189,7 @@ export class AuthService {
           $set: {
             jti: user.jti,
             expiresAt: new Date(
-              Date.now() +
-                AuthService.ACCESS_TOKEN_TTL_SECONDS * 1000,
+              Date.now() + AuthService.ACCESS_TOKEN_TTL_SECONDS * 1000,
             ),
           },
         },
@@ -198,13 +220,14 @@ export class AuthService {
     const currentUser = await this.usersService.findById(userId);
 
     if (!currentUser || !currentUser.isActive) {
-      throw new UnauthorizedException(
-        'User account not found or inactive',
-      );
+      throw new UnauthorizedException('User account not found or inactive');
     }
+
+    assertNotIdle(currentUser.lastActivityAt, this.idleTimeoutMs);
 
     return {
       user: this.sanitizeUser(currentUser),
+      idleTimeoutSeconds: Math.round(this.idleTimeoutMs / 1000),
     };
   }
 
@@ -230,8 +253,7 @@ export class AuthService {
       userId: user._id,
       tokenHash: this.hashToken(refreshToken),
       expiresAt: new Date(
-        Date.now() +
-          AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
+        Date.now() + AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
       ),
     });
 
@@ -257,6 +279,7 @@ export class AuthService {
       branchId: user.branchId.toString(),
       isActive: user.isActive,
       lastLogin: user.lastLogin,
+      lastActivityAt: user.lastActivityAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

@@ -34,5 +34,4 @@ export class RefreshToken {
   revokedAt?: Date | null;
 }
 
-export const RefreshTokenSchema =
-  SchemaFactory.createForClass(RefreshToken);
+export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);

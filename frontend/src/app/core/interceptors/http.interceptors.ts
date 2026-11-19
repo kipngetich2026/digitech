@@ -13,6 +13,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes('/auth/register') ||
     req.url.includes('/auth/refresh');
   const isLogout = req.url.includes('/auth/logout');
+  const isActivity = req.url.includes('/auth/activity');
 
   const token = auth.token();
   const authReq =
@@ -28,7 +29,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => err);
       }
 
-      if (isPublicAuth || isLogout) {
+      if (isPublicAuth || isLogout || isActivity) {
         return throwError(() => err);
       }
 

@@ -40,6 +40,8 @@ export interface TokenPair {
 export interface LoginResponse extends TokenPair {
   message: string;
   user: SanitizedUser;
+  /** Server idle timeout in seconds (when provided). */
+  idleTimeoutSeconds?: number;
 }
 
 export interface RefreshTokenRequest {
@@ -49,6 +51,7 @@ export interface RefreshTokenRequest {
 export interface RefreshResponse extends TokenPair {
   message?: string;
   user: SanitizedUser;
+  idleTimeoutSeconds?: number;
 }
 
 export interface LogoutRequest {
@@ -62,6 +65,7 @@ export interface RegisterResponse {
 
 export interface MeResponse {
   user: SanitizedUser;
+  idleTimeoutSeconds?: number;
 }
 
 export interface UpdateUserRequest {

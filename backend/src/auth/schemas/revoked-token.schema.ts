@@ -23,5 +23,4 @@ export class RevokedToken {
   expiresAt: Date;
 }
 
-export const RevokedTokenSchema =
-  SchemaFactory.createForClass(RevokedToken);
+export const RevokedTokenSchema = SchemaFactory.createForClass(RevokedToken);

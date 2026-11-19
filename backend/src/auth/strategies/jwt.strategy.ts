@@ -19,6 +19,28 @@ export interface JwtPayload {
   jti?: string;
 }
 
+function readIdleTimeoutMs(configService: ConfigService): number {
+  const raw = configService.get<string>('IDLE_TIMEOUT_MINUTES');
+  const minutes = Number.parseInt(raw ?? '', 10);
+  const safe = Number.isFinite(minutes) && minutes > 0 ? minutes : 30;
+  return safe * 60 * 1000;
+}
+
+function assertNotIdle(
+  lastActivityAt: Date | undefined | null,
+  idleTimeoutMs: number,
+): void {
+  if (!lastActivityAt) return;
+
+  const idleMs = Date.now() - new Date(lastActivityAt).getTime();
+
+  if (idleMs > idleTimeoutMs) {
+    throw new UnauthorizedException(
+      'Session has ended due to inactivity. Please sign in again',
+    );
+  }
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -53,6 +75,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user.isActive) {
       throw new UnauthorizedException('User account is inactive');
     }
+
+    assertNotIdle(user.lastActivityAt, readIdleTimeoutMs(this.configService));
 
     return {
       sub: user._id.toString(),

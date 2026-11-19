@@ -18,6 +18,24 @@ import {
 import { ApiService } from './api.service';
 
 const STORAGE_KEY = 'digitech.auth';
+const IDLE_STORAGE_KEY = 'digitech.auth.idle';
+
+/** Kept in sync with IdleTimeoutService's storage key (avoids circular DI). */
+function touchIdleClock(): void {
+  try {
+    localStorage.setItem(IDLE_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
+function clearIdleClock(): void {
+  try {
+    localStorage.removeItem(IDLE_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 interface StoredAuth extends TokenPair {
   user: SanitizedUser;
@@ -29,27 +47,17 @@ export class AuthService {
   private readonly router = inject(Router);
 
   private readonly stored = this.readStorage();
-  private readonly _user = signal<SanitizedUser | null>(
-    this.stored?.user ?? null,
-  );
-  private readonly _token = signal<string | null>(
-    this.stored?.accessToken ?? null,
-  );
-  private readonly _refreshToken = signal<string | null>(
-    this.stored?.refreshToken ?? null,
-  );
+  private readonly _user = signal<SanitizedUser | null>(this.stored?.user ?? null);
+  private readonly _token = signal<string | null>(this.stored?.accessToken ?? null);
+  private readonly _refreshToken = signal<string | null>(this.stored?.refreshToken ?? null);
 
   readonly user = this._user.asReadonly();
   readonly token = this._token.asReadonly();
   readonly refreshToken = this._refreshToken.asReadonly();
   readonly isAuthenticated = computed(() => !!this._token());
-  readonly isSuperAdmin = computed(
-    () => this._user()?.role === 'SUPER_ADMIN',
-  );
+  readonly isSuperAdmin = computed(() => this._user()?.role === 'SUPER_ADMIN');
   /** SUPER_ADMIN or MANAGER — everything except administration. */
-  readonly isElevated = computed(() =>
-    this.hasRole(...ELEVATED_ROLES),
-  );
+  readonly isElevated = computed(() => this.hasRole(...ELEVATED_ROLES));
   readonly role = computed(() => this._user()?.role ?? null);
   readonly fullName = computed(() => {
     const u = this._user();
@@ -65,7 +73,7 @@ export class AuthService {
   login(req: LoginRequest): Observable<LoginResponse> {
     return this.api
       .post<LoginResponse>('/auth/login', req)
-      .pipe(tap((res) => this.persist(res, res.user)));
+      .pipe(tap((res) => this.persist(res, res.user, { resetIdle: true })));
   }
 
   register(req: RegisterRequest): Observable<RegisterResponse> {
@@ -76,9 +84,7 @@ export class AuthService {
     const refreshToken = this._refreshToken();
 
     if (!refreshToken) {
-      return throwError(
-        () => new Error('No refresh token available'),
-      );
+      return throwError(() => new Error('No refresh token available'));
     }
 
     return this.api
@@ -125,13 +131,18 @@ export class AuthService {
 
   clearSession(): void {
     localStorage.removeItem(STORAGE_KEY);
+    clearIdleClock();
     this._user.set(null);
     this._token.set(null);
     this._refreshToken.set(null);
     void this.router.navigate(['/login']);
   }
 
-  private persist(tokens: TokenPair, user: SanitizedUser): void {
+  private persist(
+    tokens: TokenPair,
+    user: SanitizedUser,
+    opts: { resetIdle?: boolean } = {},
+  ): void {
     const data: StoredAuth = {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -140,6 +151,7 @@ export class AuthService {
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (opts.resetIdle) touchIdleClock();
     this._token.set(tokens.accessToken);
     this._refreshToken.set(tokens.refreshToken);
     this._user.set(user);
