@@ -71,7 +71,7 @@ export class UsersService {
           }),
         },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )

@@ -147,7 +147,7 @@ export class ProductsService {
         filter,
         data,
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       ).exec();
@@ -187,7 +187,7 @@ export class ProductsService {
         filter,
         { isActive },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       ).exec();

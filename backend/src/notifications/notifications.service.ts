@@ -284,7 +284,7 @@ export class NotificationsService {
             isRead: true,
           },
           {
-            new: true,
+            returnDocument: 'after',
           },
         )
         .exec();

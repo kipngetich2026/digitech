@@ -159,7 +159,7 @@ export class CustomersService {
 
     const customer = await this.customerModel
       .findOneAndUpdate(filter, data, {
-        new: true,
+          returnDocument: 'after',
         runValidators: true,
       })
       .exec();
@@ -193,7 +193,7 @@ export class CustomersService {
         filter,
         { isActive },
         {
-          new: true,
+        returnDocument: 'after',
           runValidators: true,
         },
       )

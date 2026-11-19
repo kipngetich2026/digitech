@@ -149,7 +149,7 @@ export class AuthService {
         expiresAt: { $gt: new Date() },
       },
       { $set: { revokedAt: new Date() } },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!storedToken) {

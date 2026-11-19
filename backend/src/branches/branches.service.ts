@@ -100,7 +100,7 @@ export class BranchesService {
         id,
         data,
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )
@@ -126,7 +126,7 @@ export class BranchesService {
         id,
         { isActive },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )

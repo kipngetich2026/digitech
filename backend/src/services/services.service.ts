@@ -164,7 +164,7 @@ export class ServicesService {
           filter,
           data,
           {
-            new: true,
+            returnDocument: 'after',
             runValidators: true,
           },
         )
@@ -210,7 +210,7 @@ export class ServicesService {
           filter,
           { isActive },
           {
-            new: true,
+            returnDocument: 'after',
             runValidators: true,
           },
         )
