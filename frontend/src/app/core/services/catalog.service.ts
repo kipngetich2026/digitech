@@ -2,11 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Branch, CreateBranchRequest, UpdateBranchRequest } from '../models/branch.models';
-import {
-  CreateCustomerRequest,
-  Customer,
-  UpdateCustomerRequest,
-} from '../models/customer.models';
+import { CreateCustomerRequest, Customer, UpdateCustomerRequest } from '../models/customer.models';
 import {
   CreateEmployeeRequest,
   CreateProductRequest,
@@ -95,6 +91,9 @@ export class CatalogService {
   // Employees
   listEmployees(): Observable<Employee[]> {
     return this.api.get<Employee[]>('/employees');
+  }
+  listEmployeeUserOptions(): Observable<User[]> {
+    return this.api.get<User[]>('/employees/user-options');
   }
   createEmployee(req: CreateEmployeeRequest): Observable<Employee> {
     return this.api.post<Employee>('/employees', req);

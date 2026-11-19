@@ -125,6 +125,28 @@ export class EmployeesService {
     return employee.save();
   }
 
+  async findUserOptions(): Promise<
+    Array<{
+      _id: Types.ObjectId;
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+      isActive: boolean;
+    }>
+  > {
+    const employedUserIds = await this.employeeModel.distinct('userId').exec();
+
+    return this.userModel
+      .find({
+        isActive: true,
+        _id: { $nin: employedUserIds },
+      })
+      .select('firstName lastName email role isActive')
+      .sort({ firstName: 1, lastName: 1 })
+      .exec();
+  }
+
   async findAll(user: {
     sub: string;
     role: string;

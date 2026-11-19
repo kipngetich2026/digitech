@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SalesService } from '../../core/services/sales.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
@@ -20,6 +21,7 @@ import { downloadBlob, filenameFromDisposition } from '../../core/services/downl
   standalone: true,
   imports: [
     FormsModule,
+    RouterLink,
     PageHeaderComponent,
     SearchInputComponent,
     StatusBadgeComponent,
@@ -138,13 +140,24 @@ import { downloadBlob, filenameFromDisposition } from '../../core/services/downl
                 (ngChange)="syncBalance()"
                 class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
               >
-                <option value="" disabled>Select invoice</option>
+                <option value="" disabled>
+                  {{ openInvoices().length ? 'Select invoice' : 'No invoices awaiting payment' }}
+                </option>
                 @for (inv of openInvoices(); track inv._id) {
                   <option [value]="inv._id">
                     {{ inv.invoiceNumber }} — balance {{ inv.balanceDue | kes }}
                   </option>
                 }
               </select>
+              @if (openInvoices().length === 0) {
+                <p class="mt-1.5 text-xs text-slate-500">
+                  No unpaid invoices found.
+                  <a routerLink="/invoices" class="font-medium text-indigo-600 hover:underline"
+                    >Create an invoice</a
+                  >
+                  from an order first.
+                </p>
+              }
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -272,7 +285,7 @@ export class PaymentListComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
-    this.sales.listInvoices().subscribe({ next: (l) => this.invoices.set(l) });
+    this.loadInvoices();
   }
 
   reload(): void {
@@ -284,6 +297,15 @@ export class PaymentListComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
+        this.toast.error(errorMessage(err.error ?? err));
+      },
+    });
+  }
+
+  loadInvoices(): void {
+    this.sales.listInvoices().subscribe({
+      next: (l) => this.invoices.set(l),
+      error: (err) => {
         this.toast.error(errorMessage(err.error ?? err));
       },
     });
@@ -317,6 +339,8 @@ export class PaymentListComponent implements OnInit {
     this.createForm = { invoiceId: '', amount: 0, method: 'CASH', reference: '', notes: '' };
     this.createError.set('');
     this.createOpen.set(true);
+    // Refresh so newly created / partially paid invoices appear
+    this.loadInvoices();
   }
 
   syncBalance(): void {
@@ -343,7 +367,7 @@ export class PaymentListComponent implements OnInit {
           this.createOpen.set(false);
           this.toast.success(`Payment ${p.paymentNumber} recorded`);
           this.reload();
-          this.sales.listInvoices().subscribe({ next: (l) => this.invoices.set(l) });
+          this.loadInvoices();
           // Auto-generate + download receipt
           if (p.status === 'COMPLETED') {
             this.downloadReceipt(p, true);

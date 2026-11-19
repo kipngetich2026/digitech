@@ -18,24 +18,44 @@ import { HasRoleDirective } from '../../core/directives/has-role.directive';
   selector: 'app-employee-list',
   standalone: true,
   imports: [
-    FormsModule, PageHeaderComponent, SearchInputComponent, StatusBadgeComponent,
-    EmptyStateComponent, LoadingComponent, ConfirmDialogComponent, KesPipe, HasRoleDirective,
+    FormsModule,
+    PageHeaderComponent,
+    SearchInputComponent,
+    StatusBadgeComponent,
+    EmptyStateComponent,
+    LoadingComponent,
+    ConfirmDialogComponent,
+    KesPipe,
+    HasRoleDirective,
   ],
   template: `
     <app-page-header title="Employees" subtitle="Link users to employment records">
-      <button *hasRole="ELEVATED_ROLES" type="button" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-        (click)="openCreate()">+ New employee</button>
+      <button
+        *hasRole="ELEVATED_ROLES"
+        type="button"
+        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+        (click)="openCreate()"
+      >
+        + New employee
+      </button>
     </app-page-header>
 
     <div class="mb-4 flex items-center justify-between gap-3">
-      <app-search-input [value]="query()" (search)="query.set($event)" placeholder="Search employees…" />
+      <app-search-input
+        [value]="query()"
+        (search)="query.set($event)"
+        placeholder="Search employees…"
+      />
       <span class="text-xs text-slate-400">{{ filtered().length }} employees</span>
     </div>
 
     @if (loading()) {
       <app-loading />
     } @else if (filtered().length === 0) {
-      <app-empty-state title="No employees yet" hint="Create employee records for your staff users." />
+      <app-empty-state
+        title="No employees yet"
+        hint="Create employee records for your staff users."
+      />
     } @else {
       <div class="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
         <table class="min-w-full divide-y divide-slate-100 text-sm">
@@ -63,14 +83,31 @@ import { HasRoleDirective } from '../../core/directives/has-role.directive';
                 <td class="px-4 py-3 text-slate-600">{{ e.jobTitle }}</td>
                 <td class="px-4 py-3 text-slate-600">{{ e.employmentType }}</td>
                 <td class="px-4 py-3 text-right font-medium">{{ e.basicSalary | kes }}</td>
-                <td class="px-4 py-3"><app-status-badge [status]="e.isActive ? 'ACTIVE' : 'INACTIVE'" /></td>
+                <td class="px-4 py-3">
+                  <app-status-badge [status]="e.isActive ? 'ACTIVE' : 'INACTIVE'" />
+                </td>
                 <td class="px-4 py-3 text-right" *hasRole="ELEVATED_ROLES">
-                  <button type="button" class="mr-3 text-xs font-medium text-indigo-600 hover:underline"
-                    (click)="openEdit(e)">Edit</button>
-                  <button type="button" class="mr-3 text-xs font-medium text-slate-500 hover:underline"
-                    (click)="toggleStatus(e)">{{ e.isActive ? 'Deactivate' : 'Activate' }}</button>
-                  <button type="button" class="text-xs font-medium text-rose-600 hover:underline"
-                    (click)="askDelete(e)">Delete</button>
+                  <button
+                    type="button"
+                    class="mr-3 text-xs font-medium text-indigo-600 hover:underline"
+                    (click)="openEdit(e)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="mr-3 text-xs font-medium text-slate-500 hover:underline"
+                    (click)="toggleStatus(e)"
+                  >
+                    {{ e.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="text-xs font-medium text-rose-600 hover:underline"
+                    (click)="askDelete(e)"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             }
@@ -80,77 +117,171 @@ import { HasRoleDirective } from '../../core/directives/has-role.directive';
     }
 
     @if (modalOpen()) {
-      <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4" (click)="modalOpen.set(false)">
-        <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl ring-1 ring-slate-200" (click)="$event.stopPropagation()">
-          <h2 class="text-lg font-semibold text-slate-900">{{ editingId() ? 'Edit employee' : 'New employee' }}</h2>
+      <div
+        class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+        (click)="modalOpen.set(false)"
+      >
+        <div
+          class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl ring-1 ring-slate-200"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 class="text-lg font-semibold text-slate-900">
+            {{ editingId() ? 'Edit employee' : 'New employee' }}
+          </h2>
           <form class="mt-4 space-y-3" (ngSubmit)="save()" #f="ngForm">
             @if (!editingId()) {
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
-                <select name="userId" required [(ngModel)]="form.userId"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                  <option value="" disabled>Select user</option>
-                  @for (u of users(); track u._id) {
-                    <option [value]="u._id">{{ u.firstName }} {{ u.lastName }} ({{ u.email }})</option>
-                  }
-                </select>
+                @if (usersLoading()) {
+                  <select
+                    name="userId"
+                    required
+                    disabled
+                    [(ngModel)]="form.userId"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="">Loading users…</option>
+                  </select>
+                } @else if (usersError()) {
+                  <select
+                    name="userId"
+                    required
+                    disabled
+                    [(ngModel)]="form.userId"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="">{{ usersError() }}</option>
+                  </select>
+                } @else if (users().length === 0) {
+                  <select
+                    name="userId"
+                    required
+                    disabled
+                    [(ngModel)]="form.userId"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="">No users available — register a user first</option>
+                  </select>
+                } @else {
+                  <select
+                    name="userId"
+                    required
+                    [(ngModel)]="form.userId"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="" disabled>Select user</option>
+                    @for (u of users(); track u._id) {
+                      <option [value]="u._id">
+                        {{ u.firstName }} {{ u.lastName }} ({{ u.email }})
+                      </option>
+                    }
+                  </select>
+                }
               </div>
             }
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Department</label>
-                <input name="department" required minlength="2" [(ngModel)]="form.department"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input
+                  name="department"
+                  required
+                  minlength="2"
+                  [(ngModel)]="form.department"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
               </div>
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Job title</label>
-                <input name="jobTitle" required minlength="2" [(ngModel)]="form.jobTitle"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input
+                  name="jobTitle"
+                  required
+                  minlength="2"
+                  [(ngModel)]="form.jobTitle"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Employment type</label>
-                <select name="employmentType" required [(ngModel)]="form.employmentType"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                  @for (t of types; track t) { <option [value]="t">{{ t }}</option> }
+                <select
+                  name="employmentType"
+                  required
+                  [(ngModel)]="form.employmentType"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+                  @for (t of types; track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
                 </select>
               </div>
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Basic salary</label>
-                <input name="basicSalary" type="number" min="0" required [(ngModel)]="form.basicSalary"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input
+                  name="basicSalary"
+                  type="number"
+                  min="0"
+                  required
+                  [(ngModel)]="form.basicSalary"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Hire date</label>
-                <input name="hireDate" type="date" required [(ngModel)]="form.hireDate"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input
+                  name="hireDate"
+                  type="date"
+                  required
+                  [(ngModel)]="form.hireDate"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
               </div>
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                <input name="notes" maxlength="1000" [(ngModel)]="form.notes"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input
+                  name="notes"
+                  maxlength="1000"
+                  [(ngModel)]="form.notes"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
               </div>
             </div>
             @if (formError()) {
               <p class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ formError() }}</p>
             }
             <div class="flex justify-end gap-3 pt-2">
-              <button type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-                (click)="modalOpen.set(false)">Cancel</button>
-              <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                [disabled]="saving() || f.invalid">{{ saving() ? 'Saving…' : 'Save' }}</button>
+              <button
+                type="button"
+                class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                (click)="modalOpen.set(false)"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                [disabled]="saving() || f.invalid"
+              >
+                {{ saving() ? 'Saving…' : 'Save' }}
+              </button>
             </div>
           </form>
         </div>
       </div>
     }
 
-    <app-confirm-dialog [open]="deleteTarget() !== null" title="Delete employee"
-      [message]="'Delete employee record for ' + (deleteTarget() ? userName(deleteTarget()!) : '') + '?'"
-      [busy]="deleting()" (confirm)="doDelete()" (cancel)="deleteTarget.set(null)" />
+    <app-confirm-dialog
+      [open]="deleteTarget() !== null"
+      title="Delete employee"
+      [message]="
+        'Delete employee record for ' + (deleteTarget() ? userName(deleteTarget()!) : '') + '?'
+      "
+      [busy]="deleting()"
+      (confirm)="doDelete()"
+      (cancel)="deleteTarget.set(null)"
+    />
   `,
 })
 export class EmployeeListComponent implements OnInit {
@@ -158,10 +289,11 @@ export class EmployeeListComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
 
-
   readonly loading = signal(true);
   readonly items = signal<Employee[]>([]);
   readonly users = signal<User[]>([]);
+  readonly usersLoading = signal(false);
+  readonly usersError = signal('');
   readonly query = signal('');
   readonly modalOpen = signal(false);
   readonly editingId = signal<string | null>(null);
@@ -173,16 +305,42 @@ export class EmployeeListComponent implements OnInit {
   readonly types: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN', 'CASUAL'];
 
   form: {
-    userId: string; department: string; jobTitle: string;
-    employmentType: EmploymentType; basicSalary: number; hireDate: string; notes: string;
+    userId: string;
+    department: string;
+    jobTitle: string;
+    employmentType: EmploymentType;
+    basicSalary: number;
+    hireDate: string;
+    notes: string;
   } = {
-    userId: '', department: '', jobTitle: '', employmentType: 'FULL_TIME',
-    basicSalary: 0, hireDate: '', notes: '',
+    userId: '',
+    department: '',
+    jobTitle: '',
+    employmentType: 'FULL_TIME',
+    basicSalary: 0,
+    hireDate: '',
+    notes: '',
   };
 
   ngOnInit(): void {
     this.reload();
-    this.catalog.listUsers().subscribe({ next: (l) => this.users.set(l) });
+    this.loadUsers();
+  }
+
+  loadUsers(): void {
+    this.usersLoading.set(true);
+    this.usersError.set('');
+    this.catalog.listEmployeeUserOptions().subscribe({
+      next: (l) => {
+        this.users.set(l);
+        this.usersLoading.set(false);
+      },
+      error: (err) => {
+        this.users.set([]);
+        this.usersLoading.set(false);
+        this.usersError.set(errorMessage(err.error ?? err));
+      },
+    });
   }
 
   reload(): void {
@@ -213,25 +371,32 @@ export class EmployeeListComponent implements OnInit {
     const q = this.query().toLowerCase().trim();
     if (!q) return this.items();
     return this.items().filter((e) =>
-      [this.userName(e), this.userEmail(e), e.department, e.jobTitle, e.employeeNumber]
-        .some((v) => v.toLowerCase().includes(q)),
+      [this.userName(e), this.userEmail(e), e.department, e.jobTitle, e.employeeNumber].some((v) =>
+        v.toLowerCase().includes(q),
+      ),
     );
   }
 
   openCreate(): void {
     this.editingId.set(null);
     this.form = {
-      userId: '', department: '', jobTitle: '', employmentType: 'FULL_TIME',
-      basicSalary: 0, hireDate: new Date().toISOString().slice(0, 10), notes: '',
+      userId: '',
+      department: '',
+      jobTitle: '',
+      employmentType: 'FULL_TIME',
+      basicSalary: 0,
+      hireDate: new Date().toISOString().slice(0, 10),
+      notes: '',
     };
     this.formError.set('');
+    this.loadUsers();
     this.modalOpen.set(true);
   }
 
   openEdit(e: Employee): void {
     this.editingId.set(e._id);
     this.form = {
-      userId: typeof e.userId === 'object' ? (e.userId as { _id?: string })._id ?? '' : '',
+      userId: typeof e.userId === 'object' ? ((e.userId as { _id?: string })._id ?? '') : '',
       department: e.department,
       jobTitle: e.jobTitle,
       employmentType: e.employmentType,

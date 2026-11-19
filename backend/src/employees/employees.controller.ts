@@ -23,40 +23,30 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeesController {
-  constructor(
-    private readonly employeesService: EmployeesService,
-  ) {}
+  constructor(private readonly employeesService: EmployeesService) {}
 
   @Post()
   @Roles('SUPER_ADMIN', 'MANAGER')
-  create(
-    @Body() createEmployeeDto: CreateEmployeeDto,
-    @Req() req: any,
-  ) {
-    return this.employeesService.create(
-      createEmployeeDto,
-      req.user,
-    );
+  create(@Body() createEmployeeDto: CreateEmployeeDto, @Req() req: any) {
+    return this.employeesService.create(createEmployeeDto, req.user);
   }
 
   @Get()
   @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
   findAll(@Req() req: any) {
-    return this.employeesService.findAll(
-      req.user,
-    );
+    return this.employeesService.findAll(req.user);
+  }
+
+  @Get('user-options')
+  @Roles('SUPER_ADMIN', 'MANAGER')
+  findUserOptions() {
+    return this.employeesService.findUserOptions();
   }
 
   @Get(':id')
   @Roles('SUPER_ADMIN', 'MANAGER', 'STAFF')
-  findOne(
-    @Param('id') id: string,
-    @Req() req: any,
-  ) {
-    return this.employeesService.findById(
-      id,
-      req.user,
-    );
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.employeesService.findById(id, req.user);
   }
 
   @Patch(':id')
@@ -66,11 +56,7 @@ export class EmployeesController {
     @Body() updateEmployeeDto: UpdateEmployeeDto,
     @Req() req: any,
   ) {
-    return this.employeesService.update(
-      id,
-      updateEmployeeDto,
-      req.user,
-    );
+    return this.employeesService.update(id, updateEmployeeDto, req.user);
   }
 
   @Patch(':id/status')
@@ -90,13 +76,7 @@ export class EmployeesController {
 
   @Delete(':id')
   @Roles('SUPER_ADMIN', 'MANAGER')
-  remove(
-    @Param('id') id: string,
-    @Req() req: any,
-  ) {
-    return this.employeesService.remove(
-      id,
-      req.user,
-    );
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.employeesService.remove(id, req.user);
   }
 }
